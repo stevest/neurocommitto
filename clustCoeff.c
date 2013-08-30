@@ -1,7 +1,7 @@
 /*THIS FILE COMPILES AS A MATLAB MEX DYNAMIC LIBRARY*/
 /*from Dorogovtsev Pseudofractal scale-free web,2002*/
 
-/*stefanou@imbb.forth.gr*/
+/*stamatiad.st@gmail.com*/
 
 #include <stdio.h>
 #include <stdlib.h>
