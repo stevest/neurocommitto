@@ -52,7 +52,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     for(i=0;i<numel;i++){
         for(j=0;j<numel;j++){
             /*individual probabilities(?)*/
-            tempMat[i*numel+j] = (commonIncomming(i,j,connMat,numel,connBins,incomingProb,connNumel) +
+            tempMat[i*numel+j] = (commonIncomming(i,j,connMat,numel,connBins,incomingProb,connNumel) *
                     commonOutgoing(i,j,connMat,numel,connBins,outgoingProb,connNumel) ) ; /*was /5 (?)*/
         }
         /*printf("@ i %d j %d %f\n",i,j,tempMat[i*numel+j] );*/

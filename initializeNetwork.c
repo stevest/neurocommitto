@@ -41,12 +41,12 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 	for(i=0;i<numel;i++){
 		for(j=start;j<numel;j++){
             /*restrict connectivity!*/
-            incomming = 0;
+            /*incomming = 0;
             outgoing = 0;
             for(k=0;k<numel;k++){
                 incomming += connMat[k*numel+j];
                 outgoing  += connMat[i*numel+k];
-            }
+            }*/
             /*If current pair can not project / receive skip it*/
             /*if ( (incomming>6) || (outgoing>5))
                 continue;*/
@@ -93,11 +93,15 @@ int decideConnection(double dist, double *CBins, double *CProb, int CNumel, doub
     iR=0;
 	while((dist>RBins[iR]) && (iR<RNumel)){iR++;}
     
+    
 	if( RND > (CProb[iC]+RProb[iR]) ){
+        /*printf("R=%.3f R+C=%.3f RND=%.3f 0\n",RProb[iR],RProb[iR]+CProb[iC],RND);*/
         return 0;
     }else if(RND > RProb[iR]){
+        /*printf("R=%.3f R+C=%.3f RND=%.3f 1\n",RProb[iR],RProb[iR]+CProb[iC],RND);*/
          return 1;
     }else {
+       /* printf("R=%.3f R+C=%.3f RND=%.3f 2\n",RProb[iR],RProb[iR]+CProb[iC],RND);*/
         return 2;
     }
 }

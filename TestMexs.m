@@ -1,15 +1,22 @@
 close all;clear all;
 % Main parameters:
-nPC = 14;  %was 14
-nPV = 3; % was 6
+nPC = 1500;  %was 14
+nPV = 500; % was 6
 nCB = 0;
 nCR = 0;
 AllCells = [nPC , nPV , nCB , nCR];
 nAllCells = sum(AllCells);
 
 % Create Network:
-Points = CreateSobolNetwork(nAllCells, 28, 3); % was 28
-% Points = CreateRandomNetwork(nAllCells, 320, 3); % was 28
+% Points = CreateSobolNetwork(nAllCells, 28, 3); % was 28
+% Points = CreateRandomNetwork(nAllCells, 28, 3); % was 320
+Points = CreatePerinNetwork(28,30);
+nPC = length(Points);
+nPV = 0; % was 6
+nCB = 0;
+nCR = 0;
+AllCells = [nPC , nPV , nCB , nCR];
+nAllCells = sum(AllCells);
 
 figure('Renderer', 'OpenGL');
 scatter3(Points(1:nPC,1), Points(1:nPC,2), Points(1:nPC,3),...
@@ -78,21 +85,23 @@ NincomingProbs = [0.12, 0.21, 0.25, 0.4];
 NoutgoingProbs = [0.1, 0.25, 0.22, 0.18];
 
 %increased connectivity in Prefrontal
-connProbs = connProbs * 1.3; % 10%-20% increase in connectivity
-recipProbs = recipProbs * 1.8; % 80% increased bidirectional connectivity
+connProbs = connProbs * 0.02%1.3; % 10%-20% increase in connectivity
+recipProbs = recipProbs * 0.02%1.8; % 80% increased bidirectional connectivity
+NincomingProbs = NincomingProbs * 0.02;
+NoutgoingProbs = NoutgoingProbs * 0.02;
 
 % IR=0 ; % reciprocal probability is independend of connection probability!
 ConnMat = initializeNetwork(DistMat',connBins,connProbs,recipBins,recipProbs);
 disp(sprintf('Reciprocal connections: %3.2f%%\n',(sum(sum(ConnMat .* ConnMat')) * 100) / (nPC^2 - nPC) ));
-disp(sprintf('Initial clustering coefficient (S) is: %f \n',nanmean(clustCoeff(ConnMat))));
-[C1,C2,C]=clust_coeff(ConnMat);
+disp(sprintf('Initial clustering coefficient (My version) is: %f \n',nanmean(clustCoeff(ConnMat))));
+[C1,C2,C]=clust_coeff(ConnMat);% Using MIT toolbox
 disp(sprintf('Initial clustering coefficient (MIT toolbox) is: %f \n',C2));
 
 % Degree distributions (Fig S3)
 outgoing = sum(ConnMat,2)
 incomming = sum(ConnMat,1)
-HIST_O = histc(outgoing,1:1:ceil(max(outgoing)) ) ;
-HIST_I = histc(incomming,1:1:ceil(max(incomming)) ) ;
+HIST_O = histc(outgoing,0:1:ceil(max(outgoing)) ) ;
+HIST_I = histc(incomming,0:1:ceil(max(incomming)) ) ;
 bar(HIST_O);
 figure;bar(HIST_I');
 

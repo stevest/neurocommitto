@@ -39,6 +39,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
                 nodesNo++;
             }
         }
+        if(nodesNo==0) continue;
         /*printf("NodesNo = %d\n",nodesNo);*/
         /*extract possible pairs between neighbours*/
         /*(neighbours are checked for directed connectivity; the current vertex not)*/
@@ -53,7 +54,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             start++;
         }
         /*printf("linksNo = %d\n",linksNo);*/
-        clustCoeff[n] = (double)linksNo / ( (double)nodesNo*((double)nodesNo-1)/2.0 );
+        /* /2 is for undirected graph!!1*/
+        clustCoeff[n] = (double)linksNo / ( (double)nodesNo/((double)nodesNo-1) );
     }
     
     mxFree(nodesVect);
