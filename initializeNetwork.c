@@ -8,7 +8,7 @@
 
 # define DEBUG
 
-/*stefanou@imbb.forth.gr*/
+/*stamatiad.st@gmail.com*/
 
 int decideConnection(double dist, double *CBins, double *CProb, int CNumel, double *RBins, double *RProb, int RNumel);
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])

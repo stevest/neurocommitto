@@ -12,9 +12,12 @@
 /*2.Extract eucledean distances between pairs*/
 /*3.Create a histogram of frequency of connections in a distance range*/
 /*4.Normalize the histogram to get propabilities as a function of intersomatic distance*/
-/*stefanou@imbb.forth.gr*/
+/*stamatiad.st@gmail.com*/
 
-double min(double a, double b);
+#ifndef _MSC_VER
+#define min(a,b) a<b?a:b
+#endif
+
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 {
     
@@ -132,11 +135,4 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
      */
     mxFree(currCluster);
     return;
-}
-
-double min(double a, double b){
-    if(a<b)
-        return a;
-    else
-        return b;
 }

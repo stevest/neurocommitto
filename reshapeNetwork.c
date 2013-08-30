@@ -7,19 +7,21 @@
 #include "math.h"
 
 
-/*stefanou@imbb.forth.gr*/
+/*stamatiad.st@gmail.com*/
+#ifndef _MSC_VER
+#define max(a,b) a>b?a:b
+#endif
 
 double connProbability(int I,int J,double* connMat,int Numel, double* CBins, double* CProb, int connNumel);
 double commonIncomming(int I,int J,double* connMat,int Numel, double* CBins, double* CProb, int connNumel);
 double commonOutgoing(int I,int J,double* connMat,int Numel, double* CBins, double* CProb, int connNumel);
 int decideConnection(double dist, double CProb, double *RBins, double *RProb, int RNumel);
-/*double max(double a, double b);*/
 
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 {
     
     /*Declerations:*/
-    double *distMat, *connMat, *outConnMat,*connBins,*incomingProb, *outgoingProb,*recipBins,*recipProb;
+    double *distMat, *connMat,*tempMat, *outConnMat,*connBins,*incomingProb, *outgoingProb,*recipBins,*recipProb;
     int numel , start, connNumel, recipNumel;
     int i,j, connType;
     double maxProb, *probsMat, TempVal;
@@ -43,7 +45,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     plhs[1] = mxCreateDoubleMatrix(numel,numel,mxREAL);
     probsMat = mxGetPr(plhs[1]);
     
-    double* tempMat = (double*)mxCalloc(numel*numel,sizeof(double));
+    tempMat = (double*)mxCalloc(numel*numel,sizeof(double));
     
     srand(time(NULL));
     /*For every unique pair*/
@@ -194,10 +196,3 @@ int decideConnection(double dist, double CProb, double *RBins, double *RProb, in
         return 1;}
     else {return 2;}
 }
-/*
-double max(double a, double b){
-    if (a >= b)
-        return a;
-    else 
-        return b;
-}*/
