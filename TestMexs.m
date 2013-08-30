@@ -86,7 +86,7 @@ ConnMat = initializeNetwork(DistMat',connBins,connProbs,recipBins,recipProbs);
 disp(sprintf('Reciprocal connections: %3.2f%%\n',(sum(sum(ConnMat .* ConnMat')) * 100) / (nPC^2 - nPC) ));
 disp(sprintf('Initial clustering coefficient (S) is: %f \n',nanmean(clustCoeff(ConnMat))));
 [C1,C2,C]=clust_coeff(ConnMat);
-disp(sprintf('Initial clustering coefficient (MIT) is: %f \n',C2));
+disp(sprintf('Initial clustering coefficient (MIT toolbox) is: %f \n',C2));
 
 % Degree distributions (Fig S3)
 outgoing = sum(ConnMat,2)
