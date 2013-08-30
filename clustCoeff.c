@@ -1,3 +1,8 @@
+/*THIS FILE COMPILES AS A MATLAB MEX DYNAMIC LIBRARY*/
+/*from Dorogovtsev Pseudofractal scale-free web,2002*/
+
+/*stefanou@imbb.forth.gr*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -5,10 +10,6 @@
 #include "mex.h"
 #include "matrix.h"
 #include "math.h"
-
-/*As in  Duncan J. Watts and Steven Strogatz, 1998 (wikipedia)*/
-/*stefanou@imbb.forth.gr*/
-
 
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 {
@@ -52,8 +53,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             start++;
         }
         /*printf("linksNo = %d\n",linksNo);*/
-        /*from Barabasi Network biology understands the cell's functional organization,2004*/
-         clustCoeff[n] = (double)linksNo / ( (double)nodesNo*((double)nodesNo-1) );
+        clustCoeff[n] = (double)linksNo / ( (double)nodesNo*((double)nodesNo-1)/2.0 );
     }
     
     mxFree(nodesVect);
