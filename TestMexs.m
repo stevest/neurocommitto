@@ -86,9 +86,11 @@ NoutgoingProbs = [0.1, 0.25, 0.22, 0.18];
 
 %increased connectivity in Prefrontal
 connProbs = connProbs * 0.02%1.3; % 10%-20% increase in connectivity
-recipProbs = recipProbs * 0.02%1.8; % 80% increased bidirectional connectivity
-NincomingProbs = NincomingProbs * 0.02;
-NoutgoingProbs = NoutgoingProbs * 0.02;
+% recipProbs = recipProbs * 0.02%1.8; % 80% increased bidirectional connectivity
+connProbs = connProbs * 2;
+recipProbs = recipProbs * 20;
+NincomingProbs = NincomingProbs * 0.01;
+NoutgoingProbs = NoutgoingProbs * 0.01;
 
 % IR=0 ; % reciprocal probability is independend of connection probability!
 ConnMat = initializeNetwork(DistMat',connBins,connProbs,recipBins,recipProbs);
@@ -159,6 +161,7 @@ for i=1:length(allCombs3)
     cluster3(i) = counter;
 end
 clusterHist3 = histc(cluster3,0:length(idxCombs3)) ;
+clusterHist3 = clusterHist3/norm(clusterHist3);
 figure;plot(clusterHist3);figure(gcf);
 
 %Cluster of 4 pyramidals

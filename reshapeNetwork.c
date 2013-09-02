@@ -52,14 +52,14 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     for(i=0;i<numel;i++){
         for(j=0;j<numel;j++){
             /*individual probabilities(?)*/
-            tempMat[i*numel+j] = (commonIncomming(i,j,connMat,numel,connBins,incomingProb,connNumel) *
-                    commonOutgoing(i,j,connMat,numel,connBins,outgoingProb,connNumel) ) ; /*was /5 (?)*/
+            tempMat[i*numel+j] = (commonIncomming(i,j,connMat,numel,connBins,incomingProb,connNumel) );
+                   /* commonOutgoing(i,j,connMat,numel,connBins,outgoingProb,connNumel) ) ;*/ /*was /5 (?)*/
         }
         /*printf("@ i %d j %d %f\n",i,j,tempMat[i*numel+j] );*/
         /*printf("@ i %d j %d %f\n",i,j,commonIncomming(i,j,connMat,numel,connBins,incomingProb,connNumel) );*/
     }
     /*Normalize probability:(NOT IN THE PAPER)*/
-    maxProb = 0;
+    /*maxProb = 0;
     for(i=0;i<numel;i++){
         for(j=0;j<numel;j++){
            if( tempMat[i*numel+j] > maxProb)
@@ -68,10 +68,11 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     }
     printf("Max probability is: %f\n",maxProb);
     TempVal = ((20*20)/(double)numel) / maxProb;
-    printf("Temp is: %f\n",TempVal);
+    printf("Temp is: %f\n",TempVal);*/
     for(i=0;i<numel;i++){
         for(j=0;j<numel;j++){
-            tempMat[i*numel+j] = tempMat[i*numel+j] * TempVal ;
+            /*tempMat[i*numel+j] = tempMat[i*numel+j] * TempVal ;*/
+            tempMat[i*numel+j] = tempMat[i*numel+j] / 6 ;
             probsMat[i*numel+j] = tempMat[i*numel+j];
         }
     }
@@ -190,9 +191,9 @@ int decideConnection(double dist, double CProb, double *RBins, double *RProb, in
     /*printf("@ bin %d disconnection prob is %f\n",iR, (CProb + RProb[iR]) );*/
         
             
-    if( RND > CProb  ){
+    if( RND > RProb[iR] + CProb + CProb ){
         return 0;}
-    else if( RND > RProb[iR] * CProb){
+    else if( RND > RProb[iR]){
         return 1;}
     else {return 2;}
 }

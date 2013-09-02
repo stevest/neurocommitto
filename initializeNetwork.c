@@ -86,6 +86,7 @@ int decideConnection(double dist, double *CBins, double *CProb, int CNumel, doub
 	int iC, iR;
     double RND;
     RND = (double)rand()/RAND_MAX;
+      
 
 	iC=0;
 	while((dist>CBins[iC]) && (iC<CNumel)){iC++;}
@@ -94,47 +95,11 @@ int decideConnection(double dist, double *CBins, double *CProb, int CNumel, doub
 	while((dist>RBins[iR]) && (iR<RNumel)){iR++;}
     
     
-	if( RND > (CProb[iC]+RProb[iR]) ){
-        /*printf("R=%.3f R+C=%.3f RND=%.3f 0\n",RProb[iR],RProb[iR]+CProb[iC],RND);*/
+	if( RND > (CProb[iC]+CProb[iC]+RProb[iR]) ){
         return 0;
     }else if(RND > RProb[iR]){
-        /*printf("R=%.3f R+C=%.3f RND=%.3f 1\n",RProb[iR],RProb[iR]+CProb[iC],RND);*/
          return 1;
     }else {
-       /* printf("R=%.3f R+C=%.3f RND=%.3f 2\n",RProb[iR],RProb[iR]+CProb[iC],RND);*/
         return 2;
     }
 }
-/*
-int decideConnectionIR(double dist, double *CBins, double *CProb, int CNumel, double *RBins, double *RProb, int RNumel){
-	int iC, iR, Type;
-	iC=0;
-	while(dist>CBins[iC]){iC++;}
-	if( ((double)rand()/RAND_MAX) > CProb[iC] ){
-		Type = 0;}
-    else{ Type = 1;}
-    
-	iR=0;
-	while(dist>RBins[iR]){iR++;}
-	if( ((double)rand()/RAND_MAX) <= RProb[iR] ) 
-		{Type = 2;}
-    
-    return Type;
-
-}
-*/
-        
-/*int decideConnection(double dist, double *CBins, double *CProb, int CNumel, double *RBins, double *RProb, int RNumel){
-	int iC, iR;
-	iC=0;
-	while(dist>CBins[iC]){iC++;}
-	if( ((double)rand()/RAND_MAX) > CProb[iC] )
-		return 0;
-		
-	iR=0;
-	while(dist>RBins[iR]){iR++;}
-	if( ((double)rand()/RAND_MAX) <= RProb[iR] ) 
-		{return 2;}
-	else
-		{return 1;}
-}*/
