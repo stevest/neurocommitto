@@ -64,14 +64,13 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 				connMat[j*numel+i] = 0;
 			}
 			if(connType == 1){
-				if(((double)rand()/RAND_MAX) <= 0.5){
 					connMat[i*numel+j] = 1;
 					connMat[j*numel+i] = 0;}
-				else{
+			if(connType == 2){
 					connMat[i*numel+j] = 0;
 					connMat[j*numel+i] = 1;}
-			}
-			if(connType == 2){
+			
+			if(connType == 3){
 				connMat[i*numel+j] = 1;
 				connMat[j*numel+i] = 1;
 			}
@@ -95,11 +94,13 @@ int decideConnection(double dist, double *CBins, double *CProb, int CNumel, doub
 	while((dist>RBins[iR]) && (iR<RNumel)){iR++;}
     
     
-	if( RND > (CProb[iC]+CProb[iC]+RProb[iR]) ){
-        return 0;
-    }else if(RND > RProb[iR]){
-         return 1;
+	if( RND > (CProb[iC]*2+RProb[iR]) ){
+        return 0; /*No connection*/
+    }else if(RND > (CProb[iC]+RProb[iR])){
+         return 1;/* one way */
+    }else if (RND > (RProb[iR])){
+        return 2; /* the other way */
     }else {
-        return 2;
+        return 3;
     }
 }

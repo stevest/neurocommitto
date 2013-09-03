@@ -60,15 +60,15 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     }
     /*Normalize probability:(NOT IN THE PAPER)*/
     /*maxProb = 0;
-    for(i=0;i<numel;i++){
-        for(j=0;j<numel;j++){
-           if( tempMat[i*numel+j] > maxProb)
-               maxProb = tempMat[i*numel+j];
-        }
-    }
-    printf("Max probability is: %f\n",maxProb);
-    TempVal = ((20*20)/(double)numel) / maxProb;
-    printf("Temp is: %f\n",TempVal);*/
+     * for(i=0;i<numel;i++){
+     * for(j=0;j<numel;j++){
+     * if( tempMat[i*numel+j] > maxProb)
+     * maxProb = tempMat[i*numel+j];
+     * }
+     * }
+     * printf("Max probability is: %f\n",maxProb);
+     * TempVal = ((20*20)/(double)numel) / maxProb;
+     * printf("Temp is: %f\n",TempVal);*/
     for(i=0;i<numel;i++){
         for(j=0;j<numel;j++){
             /*tempMat[i*numel+j] = tempMat[i*numel+j] * TempVal ;*/
@@ -77,35 +77,10 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         }
     }
     
-    /*
-     * start=1;
-     * for(i=0;i<numel;i++){
-     * for(j=start;j<numel;j++){
-     * tempMat[i*numel+j] *= 30/(N-1);
-     * }
-     * start++;
-     * }*/
-    
-    
     start=1;
     for(i=0;i<numel;i++){
         for(j=start;j<numel;j++){
-            /*printf("@ i %d j %d %f\n",i,j,tempMat[i*numel+j] );*/
             connType = decideConnection(distMat[i*numel+j],tempMat[i*numel+j],recipBins,recipProb,recipNumel);
-            
-            /*not using start*/
-            /*
-            if(connType == 0){
-                outConnMat[i*numel+j] = 0;
-            }
-            if(connType == 1){
-                outConnMat[i*numel+j] = 1;
-            }
-            if(connType == 2){
-                outConnMat[i*numel+j] = 1;
-                outConnMat[j*numel+i] = 1;
-            }
-            */
             
             /*using start*/
             if(connType == 0){
@@ -114,17 +89,17 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             }
             if(connType == 1){
                 if(!((outConnMat[i*numel+j]==0 && outConnMat[j*numel+i] == 1) ||
-                        (outConnMat[i*numel+j]==1 && outConnMat[j*numel+i] == 0)))
-                {
-                if(((double)rand()/RAND_MAX) <= 0.5){
+                        (outConnMat[i*numel+j]==1 && outConnMat[j*numel+i] == 0))){
                     outConnMat[i*numel+j] = 1;
                     outConnMat[j*numel+i] = 0;}
-                else{
-                    outConnMat[i*numel+j] = 0;
-                    outConnMat[j*numel+i] = 1;}
-                }
             }
             if(connType == 2){
+                if(!((outConnMat[i*numel+j]==0 && outConnMat[j*numel+i] == 1) ||
+                        (outConnMat[i*numel+j]==1 && outConnMat[j*numel+i] == 0))){
+                    outConnMat[i*numel+j] = 0;
+                    outConnMat[j*numel+i] = 1;}
+            }
+            if(connType == 3){
                 outConnMat[i*numel+j] = 1;
                 outConnMat[j*numel+i] = 1;
             }
@@ -189,11 +164,15 @@ int decideConnection(double dist, double CProb, double *RBins, double *RProb, in
     while((dist>RBins[iR]) && (iR<RNumel) ){iR++;}
     
     /*printf("@ bin %d disconnection prob is %f\n",iR, (CProb + RProb[iR]) );*/
-        
-            
-    if( RND > (RProb[iR] + CProb + CProb) ){
-        return 0;}
-    else if( RND > RProb[iR]){
-        return 1;}
-    else {return 2;}
+    
+    
+    if( RND > (CProb*2+RProb[iR]) ){
+        return 0; /*No connection*/
+    }else if(RND > (CProb+RProb[iR])){
+        return 1;/* one way */
+    }else if (RND > (RProb[iR])){
+        return 2; /* the other way */
+    }else {
+        return 3;
+    }
 }

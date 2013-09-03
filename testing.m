@@ -23,16 +23,16 @@ idxCombs6 = [combntns(1:6,2); combntns(6:-1:1,2)];
 %%
 connBins = [20,50,90,125,160,190,225,260,295,340];
 connProbs = [0.25, 0.21, 0.18, 0.15, 0.11, 0.09, 0.06, 0.04, 0.02, 0.01] ;
-recipBins = [20,50,90,125,160,190,225,260,295,340];
-recipProbs = [0.12, 0.1, 0.07, 0.05, 0.04, 0.03, 0.02, 0.01, 0.005, 0.003]  ;
+recipProbs = [0.12, 0.1, 0.07, 0.05, 0.04, 0.03, 0.02, 0.01, 0.005, 0.003] ;
 
 NconnBins = [0,1,2,3];
-NincomingProbs = [0.12, 0.21, 0.25, 0.4] * 0.01;
-NoutgoingProbs = [0.1, 0.25, 0.22, 0.18] * 0.01;
+NincomingProbs = [0, 0.33, 0.66, 0.99] ;
+NoutgoingProbs = [0, 0.33, 0.66, 0.99] ;
 
 ConnMat = initializeNetwork(DistMat',connBins,connProbs,recipBins,recipProbs);
-for i=1:1000
+for t=1:10000
 [ConnMat, probsMat] = reshapeNetwork(DistMat',ConnMat',NconnBins,NincomingProbs, NoutgoingProbs,recipBins,recipProbs); % problematic
+CC(t) = nanmax(clustCoeff(ConnMat));
 end
 
 % outgoing = sum(ConnMat,2)
