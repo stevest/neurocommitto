@@ -52,8 +52,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     for(i=0;i<numel;i++){
         for(j=0;j<numel;j++){
             /*individual probabilities(?)*/
-            tempMat[i*numel+j] = (commonIncomming(i,j,connMat,numel,connBins,incomingProb,connNumel) );
-                   /* commonOutgoing(i,j,connMat,numel,connBins,outgoingProb,connNumel) ) ;*/ /*was /5 (?)*/
+            tempMat[i*numel+j] = (commonIncomming(i,j,connMat,numel,connBins,incomingProb,connNumel) *
+                    commonOutgoing(i,j,connMat,numel,connBins,outgoingProb,connNumel) ) ; /*was /5 (?)*/
         }
         /*printf("@ i %d j %d %f\n",i,j,tempMat[i*numel+j] );*/
         /*printf("@ i %d j %d %f\n",i,j,commonIncomming(i,j,connMat,numel,connBins,incomingProb,connNumel) );*/
@@ -72,7 +72,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     for(i=0;i<numel;i++){
         for(j=0;j<numel;j++){
             /*tempMat[i*numel+j] = tempMat[i*numel+j] * TempVal ;*/
-            tempMat[i*numel+j] = tempMat[i*numel+j] / 6 ;
+            tempMat[i*numel+j] = tempMat[i*numel+j] / (numel-6) ;
             probsMat[i*numel+j] = tempMat[i*numel+j];
         }
     }
@@ -191,7 +191,7 @@ int decideConnection(double dist, double CProb, double *RBins, double *RProb, in
     /*printf("@ bin %d disconnection prob is %f\n",iR, (CProb + RProb[iR]) );*/
         
             
-    if( RND > RProb[iR] + CProb + CProb ){
+    if( RND > (RProb[iR] + CProb + CProb) ){
         return 0;}
     else if( RND > RProb[iR]){
         return 1;}
