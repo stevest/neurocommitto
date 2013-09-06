@@ -1,7 +1,10 @@
 /*THIS FILE COMPILES AS A MATLAB MEX DYNAMIC LIBRARY*/
 /*Function to generate intersomatic distance matrix*/
-/*Input : 3xN array of 3d points*/
-/*Output: NxN array of Distances, MinVal, MaxVal*/
+/*Input :1: 3xN array of 3d points*/
+/*      :2: Wrap dimensions flag */
+/*      :3: Size of cubic lattice (aproximate, because lattice is not cubic)
+/*      :   used to wrap dimensionality*/
+/*Output: NxN array of Distances*/
 
 /*stamatiad.st@gmail.com*/
 
@@ -31,9 +34,18 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     /*Input: the 3d points' coordinates*/
     inputPts = mxGetPr(prhs[0]); /*concatenated column-wise (Matlab does this..)*/
     NoPts = mxGetN(prhs[0]);
-    side = *mxGetPr(prhs[1]); /*square side in um)*/
-    if(*mxGetPr(prhs[2]) > 0)
-        wrapDims = 1;
+    
+    /* Argument checks */
+    if(nrhs == 1){
+        wrapDims = 0;}
+    if(nrhs == 2){
+        if(*mxGetPr(prhs[1]) > 0){
+            mexErrMsgTxt("Three input arguments required: \n    Please input the side of the cubic lattice in um!");}}
+    if(nrhs > 2){
+        if(*mxGetPr(prhs[1]) > 0){
+            wrapDims = 1;
+            side = *mxGetPr(prhs[2]);} /*square side in um)*/
+    }
     
     plhs[0] = mxCreateDoubleMatrix(NoPts,NoPts,mxREAL);
     outDistMat = mxGetPr(plhs[0]);

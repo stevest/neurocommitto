@@ -30,7 +30,6 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 	recipBins = mxGetPr(prhs[3]);
 	recipProb = mxGetPr(prhs[4]);
     recipNumel = (int)mxGetN(prhs[4]);
-    /*IR = (int)mxGetScalar(prhs[5]);*/
 	
 	plhs[0] = mxCreateDoubleMatrix(numel,numel,mxREAL);
     connMat = mxGetPr(plhs[0]);
@@ -40,25 +39,9 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 	start=1;
 	for(i=0;i<numel;i++){
 		for(j=start;j<numel;j++){
-            /*restrict connectivity!*/
-            /*incomming = 0;
-            outgoing = 0;
-            for(k=0;k<numel;k++){
-                incomming += connMat[k*numel+j];
-                outgoing  += connMat[i*numel+k];
-            }*/
-            /*If current pair can not project / receive skip it*/
-            /*if ( (incomming>6) || (outgoing>5))
-                continue;*/
-            
-            /*chose reciprocal probabilities independend or not!*/
-           /* if(IR){
-                connType = decideConnectionIR(distMat[i*numel+j],connBins,connProb,connNumel,recipBins,recipProb,recipNumel);
-            }else{*/
+            /*Decide connection type (no, single, reciprocal) based on distance and imported probabilities */
                 connType = decideConnection(distMat[i*numel+j],connBins,connProb,connNumel,recipBins,recipProb,recipNumel);
-           /* }*/
-            
-            
+            /* connection types: 0=No connection, 1,2=Single (side determined as in Perin et al. 2013), 3=Reciprocal */
 			if(connType == 0){
 				connMat[i*numel+j] = 0;
 				connMat[j*numel+i] = 0;
