@@ -3,7 +3,7 @@ function rndCombs = combntnsRND(n,k,maxCombs)
 % If all possible combinations are few (can be handled by hardware),
 % produces all the possible combinations as in :
 % http://en.wikipedia.org/wiki/Combination
-% using the Matlab's build in 'combntns' function.
+% using the Matlab's build in 'combntns' function (REQUIRES R2013a).
 % Else produces a random numder of combinations in an efford to cover the
 % combination space as even as possible (but NOT all possible combinations
 % are concidered..)

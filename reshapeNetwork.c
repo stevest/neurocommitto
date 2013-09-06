@@ -12,7 +12,6 @@
 #define max(a,b) a>b?a:b
 #endif
 
-double connProbability(int I,int J,double* connMat,int Numel, double* CBins, double* CProb, int connNumel);
 double commonIncomming(int I,int J,double* connMat,int Numel, double* CBins, double* CProb, int connNumel);
 double commonOutgoing(int I,int J,double* connMat,int Numel, double* CBins, double* CProb, int connNumel);
 int decideConnection(double dist, double CProb, double *RBins, double *RProb, int RNumel);
@@ -52,26 +51,16 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     for(i=0;i<numel;i++){
         for(j=0;j<numel;j++){
             /*individual probabilities(?)*/
+			/*Probabilities map is based in pair incomming conns only (from common neighbors) multiplied by*/
+			/*pair outgoing conns only (from common neighbors)*/
             tempMat[i*numel+j] = (commonIncomming(i,j,connMat,numel,connBins,incomingProb,connNumel) *
                     commonOutgoing(i,j,connMat,numel,connBins,outgoingProb,connNumel) ) ; /*was /5 (?)*/
         }
-        /*printf("@ i %d j %d %f\n",i,j,tempMat[i*numel+j] );*/
-        /*printf("@ i %d j %d %f\n",i,j,commonIncomming(i,j,connMat,numel,connBins,incomingProb,connNumel) );*/
+
     }
-    /*Normalize probability:(NOT IN THE PAPER)*/
-    /*maxProb = 0;
-     * for(i=0;i<numel;i++){
-     * for(j=0;j<numel;j++){
-     * if( tempMat[i*numel+j] > maxProb)
-     * maxProb = tempMat[i*numel+j];
-     * }
-     * }
-     * printf("Max probability is: %f\n",maxProb);
-     * TempVal = ((20*20)/(double)numel) / maxProb;
-     * printf("Temp is: %f\n",TempVal);*/
+    /*Normalize probability:*/
     for(i=0;i<numel;i++){
         for(j=0;j<numel;j++){
-            /*tempMat[i*numel+j] = tempMat[i*numel+j] * TempVal ;*/
             tempMat[i*numel+j] = tempMat[i*numel+j] / (numel-6) ;
             probsMat[i*numel+j] = tempMat[i*numel+j];
         }
@@ -80,20 +69,24 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     start=1;
     for(i=0;i<numel;i++){
         for(j=start;j<numel;j++){
+		/*Using Probabilities map similar to InitializeNetwork: Probabilities map is the connection probabilities and*/
+		/*the reciprocal probabilities are imported from Perin et al. Fig1 */
             connType = decideConnection(distMat[i*numel+j],tempMat[i*numel+j],recipBins,recipProb,recipNumel);
             
-            /*using start*/
+            /* connection types: 0=No connection, 1,2=Single (side determined as in Perin et al. 2013), 3=Reciprocal */
             if(connType == 0){
                 outConnMat[i*numel+j] = 0;
                 outConnMat[j*numel+i] = 0;
             }
             if(connType == 1){
+			/*POSSIBLY WRONG if single connection exists, do not reverse it!! */
                 if(!((outConnMat[i*numel+j]==0 && outConnMat[j*numel+i] == 1) ||
                         (outConnMat[i*numel+j]==1 && outConnMat[j*numel+i] == 0))){
                     outConnMat[i*numel+j] = 1;
                     outConnMat[j*numel+i] = 0;}
             }
             if(connType == 2){
+			/*POSSIBLY WRONG if single connection exists, do not reverse it!! */
                 if(!((outConnMat[i*numel+j]==0 && outConnMat[j*numel+i] == 1) ||
                         (outConnMat[i*numel+j]==1 && outConnMat[j*numel+i] == 0))){
                     outConnMat[i*numel+j] = 0;
@@ -113,19 +106,6 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     return;
 }
 
-/*Calculate connection Probability based on No of common neighborgs*/
-double connProbability(int I,int J,double* connMat,int Numel, double* CBins, double* CProb, int connNumel){
-    int i,commonNo, iC;
-    commonNo=0;
-    for(i=0;i<Numel;i++){
-        if(connMat[I*Numel+i] == 1 && connMat[i*Numel+J] == 1)/*crap*/
-            commonNo++;
-    }
-    
-    iC=0;
-    while((commonNo>CBins[iC]) && (iC<connNumel) ){iC++;}
-    return CProb[iC];
-}
 
 /*Calculate connection Probability based on No of incomminb common neighborgs*/
 double commonIncomming(int I,int J,double* connMat,int Numel, double* CBins, double* CProb, int connNumel){
