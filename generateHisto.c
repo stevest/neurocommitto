@@ -23,51 +23,43 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 {
     
     /*Declerations:*/
-    double *inputConns, *inputDist ,*allCombs, *histMinVal, *histMaxVal, histRange, *histSingle. *histReciprocal, distSum;
-    double avrIntersomatic;
-    int bin, maxBins;
-    int i, j, start,uniqueConns,CombsM,CombsN,NoPts, numBins, totalConnections;
-    int cluster, *currCluster,*histoCtr;
-    maxBins = 0;
-    /*Input: the 3d points' coordinates*/
-    /*double *inputPts = mxGetPr(prhs[0]); //concatenated column-wise (Matlab does this..)*/
-    /*int NoPts = mxGetN(prhs[0]);*/
+    double *inputConns ,*bins, *histSingle, *histReciprocal;
+    int bin;
+    int i, j, start,NoPts, numBins;
     
     inputConns = mxGetPr(prhs[0]);/*pointer of connection Matrix*/
     NoPts = mxGetN(prhs[0]);
-
-	bins = mxGetPr(prhs[1]);
-	numBins = mxGetN(prhs[1]);
-	
+    
+    bins = mxGetPr(prhs[1]);
+    numBins = mxGetN(prhs[1]);
+    
     plhs[0] = mxCreateDoubleMatrix(1,numBins,mxREAL);
     histSingle = mxGetPr(plhs[0]);
-	
-	plhs[1] = mxCreateDoubleMatrix(1,numBins,mxREAL);
-    histReciprocal = mxGetPr(plhs[1]);
     
-    /*unsigned int *histo[numBins]; high resolution bin*/
-   
-        start = 1;
-        for(i=0;i<NoPts;i++){
-            for(j=start;j<NoPts;j++){
-				int bin=0;
-				if(inputConns[i*NoPts+j] > 0){
-					bin = returnBin(inputConns[i*NoPts+j],bins);
-					histSingle[bin]++;
-					if(inputConns[j*NoPts+i] > 0)){
-						bin = returnBin(inputConns[j*NoPts+i],bins);
-						histReciprocal[bin]++;
-					}
-				}
+    plhs[1] = mxCreateDoubleMatrix(1,numBins,mxREAL);
+    histReciprocal = mxGetPr(plhs[1]);
+        
+    start = 1;
+    for(i=0;i<NoPts;i++){
+        for(j=start;j<NoPts;j++){
+            int bin=0;
+            if(inputConns[i*NoPts+j] > 0){
+                bin = returnBin(inputConns[i*NoPts+j],bins);
+                histSingle[bin]++;
+                if(inputConns[j*NoPts+i] > 0){
+                    /*bin = returnBin(inputConns[j*NoPts+i],bins);*/
+                    histReciprocal[bin]++;
+                }
             }
-            start++;
         }
+        start++;
+    }
     return;
 }
 
 
 int returnBin(double el, double *bins){
-	int c=0;
-	while(el<bins[c]) c++;
-	return c;
+    int c=0; 
+    while (el > (bins[c]) ) {c++;}
+    return c;
 }

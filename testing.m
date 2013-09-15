@@ -1,13 +1,17 @@
 close all;clear all;
+cd('C:\Users\just.steve\Documents\GitHub\neurocommitto');
 
 mex generateDistanceMat.c
 mex initializeNetwork.c
 mex reshapeNetwork.c
+mex generateHisto.c
+mex convergeConnectivity.c
 
 % Initialize somata positions as in Perin et al.
 Points = CreatePerinNetwork(28,15);
 
 % Generate distance matrix:
+% is distmat in the correct transposition?
 DistMat = generateDistanceMat(Points(1:length(Points),:)', 1, 28*12);
 
 %% Main
@@ -23,13 +27,67 @@ NconnBins = [0,1,2,3];
 NincomingProbs = [0, 0.33, 0.66, 0.99] ;
 NoutgoingProbs = [0, 0.33, 0.66, 0.99] ;
 
-% Initialize network: Create connectivity based on intersomatic distance: 
-ConnMat = initializeNetwork(DistMat',connBins,connProbs,recipBins,recipProbs);
 
-% Iterative step
+%% Initialize network: Create connectivity based on intersomatic distance:
+% ConnMat = initializeNetwork(DistMat',connBins,connProbs,recipBins,recipProbs);
+ConnMat = ones(size(DistMat));
+pntsPerTime = 10;
+
+[ConnMat, imprS, imprR] = convergeConnectivity(ConnMat, DistMat, pntsPerTime, connBins, connProbs, recipProbs, 500);
+
+[CS,CR] = generateHisto(ConnMat.*DistMat,connBins);
+CS = CS/norm(CS);
+CR = CR/norm(CR);
+
+bar(CR);
+
+%% Initialize network: Create connectivity based on intersomatic distance:
+% ConnMat = initializeNetwork(DistMat',connBins,connProbs,recipBins,recipProbs);
+ConnMat = ones(2028,2028);
+pntsPerTime = 20;
+
+[CS,CR] = generateHisto(ConnMat.*DistMat,connBins);
+CS = CS/norm(CS);
+CR = CR/norm(CR);
+cvgS = abs(sum(connProbs - CS));
+cvgR = abs(sum(recipProbs - CR));
+
+srand = clock;
+rng(srand(end));
+ctr = 1;
+for t = 1:200000
+    ri = ceil(rand(1,pntsPerTime)*2028);
+    rj = ceil(rand(1,pntsPerTime)*2028);
+    
+    % flipedEls = xor(diag(ConnMat(ri,rj)),ones(pntsPerTime,1));
+    for i=1:pntsPerTime
+        ConnMat(ri(i),rj(i)) = ~ConnMat(ri(i),rj(i));
+    end
+    
+    [CS,CR] = generateHisto(ConnMat.*DistMat,connBins);
+    CS = CS/norm(CS);
+    CR = CR/norm(CR);
+    
+    if( (abs(sum(connProbs - CS)) > cvgS) || (abs(sum(recipProbs - CR)) > cvgR) )
+        for i=1:pntsPerTime
+            ConnMat(ri(i),rj(i)) = ~ConnMat(ri(i),rj(i));
+        end
+    else
+        improvementS(ctr) = cvgS - abs(sum(connProbs - CS));
+        improvementR(ctr) = cvgR - abs(sum(recipProbs - CR));
+        disp(sprintf('@%d Improvement=%f,ctr=%d error=%f\n',t,mean([improvementS(ctr),improvementR(ctr)]),ctr,mean([cvgS,cvgR])) );
+        ctr = ctr +1;
+        cvgS = abs(sum(connProbs - CS));
+        cvgR = abs(sum(recipProbs - CR));
+    end
+    
+    
+end
+
+%% Iterative step
 for t=1:100
-[ConnMat, probsMat] = reshapeNetwork(DistMat',ConnMat',NconnBins,NincomingProbs, NoutgoingProbs,recipBins,recipProbs); % Probabilities map(probsMat) is optional
-[~,~,CC(t)] = clust_coeff(ConnMat) ;
+    [ConnMat, probsMat] = reshapeNetwork(DistMat',ConnMat',NconnBins,NincomingProbs, NoutgoingProbs,recipBins,recipProbs); % Probabilities map(probsMat) is optional
+    [~,~,CC(t)] = clust_coeff(ConnMat) ;
 end
 
 
