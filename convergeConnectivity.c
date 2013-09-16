@@ -18,13 +18,16 @@
 #define min(a,b) a<b?a:b
 #endif
 
-
+void CopyArray(double A[],double B[], int n);
+void BottomUpSort(int n, int A[], int B[], int C[]);
+void BottomUpMerge(int A[], int iLeft, int iRight, int iEnd, int B[], int C[]);
 double flip(double x);
 int returnBin(double el, double *bins);
 double L2Norm(double *vector, int len);
 void normalizeVector(double *vector, int len);
 double simpleHistDiff(double* hist1, double* hist2, int len);
 double absolut(double x);
+
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 {
     
@@ -32,24 +35,24 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     double *inputConns ,*bins, *probsS, *probsR, *histS, *histR;
     double *connMat, cvgS, cvgR, t_cvgS, t_cvgR;
     double *improvementS, *improvementR, *inputDist;
+    double *vect_Dist, *vectIDX, *t_vect_Dist;
     int steps, pntsPerTime;
-    int bin, rpts, cntr;
+    int bin, rpts, cntr, vectLen;
     int i, j,*x,*y, start,NoPts, numBins;
+    int *vect_Ids, *vect_Conn;
     
     inputConns = mxGetPr(prhs[0]);/*pointer of connection Matrix*/
     NoPts = mxGetN(prhs[0]);
     
-    inputDist = mxGetPr(prhs[1]);/*pointer of distance Matrix*/
+    pntsPerTime = (int)(*(mxGetPr(prhs[1])));/*points flipped per step*/
     
-    pntsPerTime = (int)(*(mxGetPr(prhs[2])));/*points flipped per step*/
+    bins = mxGetPr(prhs[2]);
+    numBins = mxGetN(prhs[2]);
     
-    bins = mxGetPr(prhs[3]);
-    numBins = mxGetN(prhs[3]);
+    probsS = mxGetPr(prhs[3]);
+    probsR = mxGetPr(prhs[4]);
     
-    probsS = mxGetPr(prhs[4]);
-    probsR = mxGetPr(prhs[5]);
-    
-    steps = (int)(*(mxGetPr(prhs[6]))); /*total steps*/
+    steps = (int)(*(mxGetPr(prhs[5]))); /*total steps*/
     
     plhs[0] = mxCreateDoubleMatrix(NoPts,NoPts,mxREAL);
     connMat = mxGetPr(plhs[0]);
@@ -59,116 +62,127 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     
     plhs[2] = mxCreateDoubleMatrix(1,steps,mxREAL);
     improvementR = mxGetPr(plhs[2]);
-        
-    histS = (double*)mxCalloc(numBins , sizeof(double));
+    
+    plhs[3] = mxCreateDoubleMatrix(1,NoPts*(NoPts-1),mxREAL);
+    vectIDX = mxGetPr(plhs[3]);
+    
+    /*histS = (double*)mxCalloc(numBins , sizeof(double));
     histR = (double*)mxCalloc(numBins , sizeof(double));
     
-    x = (double*)mxCalloc(pntsPerTime , sizeof(int));
-    y = (double*)mxCalloc(pntsPerTime , sizeof(int));
+    x = (int*)mxCalloc(pntsPerTime , sizeof(int));
+    y = (int*)mxCalloc(pntsPerTime , sizeof(int));*/
+    
+    vect_Dist = (double*)mxCalloc(NoPts*(NoPts-1) , sizeof(double));
+    vect_Conn = (int*)mxCalloc(NoPts*(NoPts-1) , sizeof(int));
+    
     
     printf("Running for steps=%d and points=%d\n", steps, pntsPerTime);
     
-    /*copy to output*/
-    for(i=0;i<NoPts*NoPts;i++){
-            connMat[i] = inputConns[i];
-    }
-    
-    /*Histogram function*/
+    /*copy to intermediate vectors for sorting later*/
+    cntr = 0;
     start = 1;
     for(i=0;i<NoPts;i++){
         for(j=start;j<NoPts;j++){
-            int bin=0;
-            if(connMat[i*NoPts+j] > 0){
-                bin = returnBin(inputDist[i*NoPts+j],bins);
-                histS[bin]++;
-                if(connMat[j*NoPts+i] > 0){
-                    histR[bin]++;
+            if(inputConns[i*NoPts+j] > 0){ /*if single connection*/
+                vect_Dist[cntr] = inputConns[i*NoPts+j];
+                if(inputConns[j*NoPts+i] > 0){ /*if reciprocal connection*/
+                    vect_Conn[cntr] = 2;
+                }else{
+                    vect_Conn[cntr] = 1;
                 }
+                cntr++;
             }
         }
         start++;
     }
     
-    normalizeVector(histS, numBins);
-    normalizeVector(histR, numBins);
+    vectLen = cntr ;
+    mxRealloc(vect_Dist, vectLen * sizeof(double));
+    mxRealloc(vect_Conn, vectLen * sizeof(int));
+    vect_Ids = (int*)mxCalloc(vectLen , sizeof(int));
     
-    cvgS = simpleHistDiff(probsS, histS, numBins);
-    cvgR = simpleHistDiff(probsR, histR, numBins);
+    /*perform mergesort based on distances*/
+    t_vect_Dist = (double*)mxCalloc(pntsPerTime , sizeof(double));
+    BottomUpSort(vectLen, vect_Dist, t_vect_Dist, vect_Ids);
     
-    /*begin iterative convergence*/
-    srand(time(NULL));
-    cntr = 0;
     
-    while(cntr < steps){
-       /* printf("@%d\n", cntr);*/
-        
-        /*flip random connections*/
-        printf("@%d resetting rnd points\n", cntr);
-        memset(x, 0, pntsPerTime*sizeof(int));
-        memset(y, 0, pntsPerTime*sizeof(int));
-        printf("@%d Picking points\n", cntr);
-        for(rpts=0;rpts<pntsPerTime;rpts++){
-            y[rpts] = (int)(((double)rand()/RAND_MAX) * NoPts);
-            x[rpts] = (int)(((double)rand()/RAND_MAX) * NoPts);
-            if(y[rpts]>=NoPts){y[rpts]=NoPts-1;}
-            if(x[rpts]>=NoPts){x[rpts]=NoPts-1;}
-            connMat[y[rpts]*NoPts+x[rpts]] = flip(connMat[y[rpts]*NoPts+x[rpts]]);
-        }
-        
-        /*reset histogram*/
-        printf("@%d Resetting histos\n", cntr);
-        memset(histS, 0, numBins*sizeof(double));
-        memset(histR, 0, numBins*sizeof(double));
-        
-        /*Histogram function*/
-        printf("@%d Calculating histo\n", cntr);
-        start = 1;
-        for(i=0;i<NoPts;i++){
-            for(j=start;j<NoPts;j++){
-                int bin=0;
-                if(connMat[i*NoPts+j] > 0){
-                    bin = returnBin(inputDist[i*NoPts+j],bins);
-                    histS[bin]++;
-                    if(connMat[j*NoPts+i] > 0){
-                        histR[bin]++;
-                    }
-                }
-            }
-            start++;
-        }
-        printf("@%d Normalizing vectors\n", cntr);
-        normalizeVector(histS, numBins);
-        normalizeVector(histR, numBins);
-        printf("@%d Computing histo differences\n", cntr);
-        t_cvgS = simpleHistDiff(probsS, histS, numBins);
-        t_cvgR = simpleHistDiff(probsR, histR, numBins);
-        
-        if( (t_cvgS > cvgS) || (t_cvgR > cvgR) ){
-            for(rpts=0;rpts<pntsPerTime;rpts++){
-                connMat[y[rpts]*NoPts+x[rpts]] = flip(connMat[y[rpts]*NoPts+x[rpts]]);
-            }
-        }else{
-            printf("@%d We have improved!\n", cntr);
-            improvementS[cntr] = cvgS - t_cvgS;
-            improvementR[cntr] = cvgR - t_cvgR;
-            
-            cvgS = t_cvgS;
-            cvgR = t_cvgR;
-            
-            cntr++;
-        }
-    } /*END for times*/
+    
+
     
     
     printf("Deallocate memmory\n");
-    mxFree(histS);
+    mxFree(t_vect_Dist);
+    mxFree(vect_Dist);
+    mxFree(vect_Conn);
+    mxFree(vect_Ids);
+    /*mxFree(histS);
     mxFree(histR);
     mxFree(x);
-    mxFree(y);
+    mxFree(y);*/
     
     return;
 }
 
+/* array A[] has the items to sort; array B[] is a work array */
+void BottomUpSort(int n, int A[], int B[], int C[])
+{
+  int width;
+ 
+  /* Each 1-element run in A is already "sorted". */
+ 
+  /* Make successively longer sorted runs of length 2, 4, 8, 16... until whole array is sorted. */
+  for (width = 1; width < n; width = 2 * width)
+    {
+      int i;
+ 
+      /* Array A is full of runs of length width. */
+      for (i = 0; i < n; i = i + 2 * width)
+        {
+          /* Merge two runs: A[i:i+width-1] and A[i+width:i+2*width-1] to B[] */
+          /* or copy A[i:n-1] to B[] ( if(i+width >= n) ) */
+          BottomUpMerge(A, i, min(i+width, n), min(i+2*width, n), B, C);
+        }
+ 
+      /* Now work array B is full of runs of length 2*width. */
+      /* Copy array B to array A for next iteration. */
+      /* A more efficient implementation would swap the roles of A and B */
+      CopyArray(A, B, n);
+      /* Now array A is full of runs of length 2*width. */
+    }
+}
+ 
+void BottomUpMerge(int A[], int iLeft, int iRight, int iEnd, int B[], int C[])
+{
+  int i0 = iLeft;
+  int i1 = iRight;
+  int j;
+ 
+  /* While there are elements in the left or right lists */
+  for (j = iLeft; j < iEnd; j++)
+    {
+      /* If left list head exists and is <= existing right list head */
+      if (i0 < iRight && (i1 >= iEnd || A[i0] <= A[i1]))
+        {
+          B[j] = A[i0];
+          C[j] = i0;
+          i0 = i0 + 1;
+        }
+      else
+        {
+          B[j] = A[i1];
+          C[j] = i1;
+          i1 = i1 + 1;
+        }
+    }
+}
+
+void CopyArray(double A[],double B[], int n){
+    int i=0;
+    for(i=0;i<n;i++){
+        A[i] = B[i];
+    }
+    return;
+}
 
 double flip(double x){
     if (x > 0){

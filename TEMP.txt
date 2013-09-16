@@ -1,0 +1,85 @@
+    /*Histogram function*/
+    start = 1;
+    for(i=0;i<NoPts;i++){
+        for(j=start;j<NoPts;j++){
+            int bin=0;
+            if(connMat[i*NoPts+j] > 0){
+                bin = returnBin(inputDist[i*NoPts+j],bins);
+                histS[bin]++;
+                if(connMat[j*NoPts+i] > 0){
+                    histR[bin]++;
+                }
+            }
+        }
+        start++;
+    }
+    
+    normalizeVector(histS, numBins);
+    normalizeVector(histR, numBins);
+    
+    cvgS = simpleHistDiff(probsS, histS, numBins);
+    cvgR = simpleHistDiff(probsR, histR, numBins);
+    
+    /*begin iterative convergence*/
+    srand(time(NULL));
+    cntr = 0;
+    
+    while(cntr < steps){
+       /* printf("@%d\n", cntr);*/
+        
+        /*flip random connections*/
+        printf("@%d resetting rnd points\n", cntr);
+        memset(x, 0, pntsPerTime*sizeof(int));
+        memset(y, 0, pntsPerTime*sizeof(int));
+        printf("@%d Picking points\n", cntr);
+        for(rpts=0;rpts<pntsPerTime;rpts++){
+            y[rpts] = (int)(((double)rand()/RAND_MAX) * NoPts);
+            x[rpts] = (int)(((double)rand()/RAND_MAX) * NoPts);
+            if(y[rpts]>=NoPts){y[rpts]=NoPts-1;}
+            if(x[rpts]>=NoPts){x[rpts]=NoPts-1;}
+            connMat[y[rpts]*NoPts+x[rpts]] = flip(connMat[y[rpts]*NoPts+x[rpts]]);
+        }
+        
+        /*reset histogram*/
+        printf("@%d Resetting histos\n", cntr);
+        memset(histS, 0, numBins*sizeof(double));
+        memset(histR, 0, numBins*sizeof(double));
+        
+        /*Histogram function*/
+        printf("@%d Calculating histo\n", cntr);
+        start = 1;
+        for(i=0;i<NoPts;i++){
+            for(j=start;j<NoPts;j++){
+                int bin=0;
+                if(connMat[i*NoPts+j] > 0){
+                    bin = returnBin(inputDist[i*NoPts+j],bins);
+                    histS[bin]++;
+                    if(connMat[j*NoPts+i] > 0){
+                        histR[bin]++;
+                    }
+                }
+            }
+            start++;
+        }
+        printf("@%d Normalizing vectors\n", cntr);
+        normalizeVector(histS, numBins);
+        normalizeVector(histR, numBins);
+        printf("@%d Computing histo differences\n", cntr);
+        t_cvgS = simpleHistDiff(probsS, histS, numBins);
+        t_cvgR = simpleHistDiff(probsR, histR, numBins);
+        
+        if( (t_cvgS > cvgS) || (t_cvgR > cvgR) ){
+            for(rpts=0;rpts<pntsPerTime;rpts++){
+                connMat[y[rpts]*NoPts+x[rpts]] = flip(connMat[y[rpts]*NoPts+x[rpts]]);
+            }
+        }else{
+            printf("@%d We have improved!\n", cntr);
+            improvementS[cntr] = cvgS - t_cvgS;
+            improvementR[cntr] = cvgR - t_cvgR;
+            
+            cvgS = t_cvgS;
+            cvgR = t_cvgR;
+            
+            cntr++;
+        }
+    } /*END for times*/

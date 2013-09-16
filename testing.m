@@ -13,6 +13,16 @@ Points = CreatePerinNetwork(28,15);
 % Generate distance matrix:
 % is distmat in the correct transposition?
 DistMat = generateDistanceMat(Points(1:length(Points),:)', 1, 28*12);
+% Convert to distance vector for sorting:
+start=2;
+cntr=1;
+for i=1:length(Points)
+    for j=start:length(Points)
+        DistVect(cntr) = DistMat(i,j);
+        cntr = cntr+1;
+    end
+    start=start+1;
+end
 
 %% Main
 
@@ -33,7 +43,7 @@ NoutgoingProbs = [0, 0.33, 0.66, 0.99] ;
 ConnMat = ones(size(DistMat));
 pntsPerTime = 10;
 
-[ConnMat, imprS, imprR] = convergeConnectivity(ConnMat, DistMat, pntsPerTime, connBins, connProbs, recipProbs, 500);
+[ConnMat, imprS, imprR, IDX] = convergeConnectivity(ConnMat.*DistMat, pntsPerTime, connBins, connProbs, recipProbs, 500);
 
 [CS,CR] = generateHisto(ConnMat.*DistMat,connBins);
 CS = CS/norm(CS);
