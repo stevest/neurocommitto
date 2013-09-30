@@ -14,13 +14,14 @@
 
 double commonIncomming(int I,int J,double* connMat,int Numel, double* CBins, double* CProb, int connNumel);
 double commonOutgoing(int I,int J,double* connMat,int Numel, double* CBins, double* CProb, int connNumel);
-int decideConnection(double dist, double CProb, double *RBins, double *RProb, int RNumel);
+int decideConnection(double dist, double CProb, double* bias, double *RBins, double *RProb, int RNumel);
 
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 {
     
     /*Declerations:*/
     double *distMat, *connMat,*tempMat, *outConnMat,*connBins,*incomingProb, *outgoingProb,*recipBins,*recipProb;
+    double* distBias;
     int numel , start, connNumel, recipNumel;
     int i,j, connType;
     double maxProb, *probsMat, TempVal;
@@ -28,16 +29,17 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     distMat = mxGetPr(prhs[0]);
     connMat = mxGetPr(prhs[1]);
     numel = (int)mxGetN(prhs[1]);
+    distBias = mxGetPr(prhs[2]);
     
     /*Connection probabilities*/
-    connBins = mxGetPr(prhs[2]);
-    incomingProb = mxGetPr(prhs[3]);
-    outgoingProb = mxGetPr(prhs[4]);
-    connNumel = (int)mxGetN(prhs[4]);
+    connBins = mxGetPr(prhs[3]);
+    incomingProb = mxGetPr(prhs[4]);
+    outgoingProb = mxGetPr(prhs[5]);
+    connNumel = (int)mxGetN(prhs[5]);
     /*reciprocal probabilities*/
-    recipBins = mxGetPr(prhs[5]);
-    recipProb = mxGetPr(prhs[6]);
-    recipNumel = (int)mxGetN(prhs[6]);
+    recipBins = mxGetPr(prhs[6]);
+    recipProb = mxGetPr(prhs[7]);
+    recipNumel = (int)mxGetN(prhs[7]);
     
     plhs[0] = mxCreateDoubleMatrix(numel,numel,mxREAL);
     outConnMat = mxGetPr(plhs[0]);
@@ -59,19 +61,19 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
     }
     /*Normalize probability:*/
-    for(i=0;i<numel;i++){
+    /*for(i=0;i<numel;i++){
         for(j=0;j<numel;j++){
             tempMat[i*numel+j] = tempMat[i*numel+j] / (numel-6) ;
             probsMat[i*numel+j] = tempMat[i*numel+j];
         }
-    }
+    }*/
     
     start=1;
     for(i=0;i<numel;i++){
         for(j=start;j<numel;j++){
 		/*Using Probabilities map similar to InitializeNetwork: Probabilities map is the connection probabilities and*/
 		/*the reciprocal probabilities are imported from Perin et al. Fig1 */
-            connType = decideConnection(distMat[i*numel+j],tempMat[i*numel+j],recipBins,recipProb,recipNumel);
+            connType = decideConnection(distMat[i*numel+j],tempMat[i*numel+j],distBias,recipBins,recipProb,recipNumel);
             
             /* connection types: 0=No connection, 1,2=Single (side determined as in Perin et al. 2013), 3=Reciprocal */
             if(connType == 0){
@@ -135,22 +137,23 @@ double commonOutgoing(int I,int J,double* connMat,int Numel, double* CBins, doub
     return CProb[iC];
 }
 
-int decideConnection(double dist, double CProb, double *RBins, double *RProb, int RNumel){
+int decideConnection(double dist, double CProb, double* bias, double *RBins, double *RProb, int RNumel){
     int iR;
-    double RND;
+    double RND, CSp, CRp;
     RND = (double)rand()/RAND_MAX;
-    
+
     iR=0;
     while((dist>RBins[iR]) && (iR<RNumel) ){iR++;}
     
+    CSp = CProb / bias[iR];
+    CRp = RProb[iR] / bias[iR];
     /*printf("@ bin %d disconnection prob is %f\n",iR, (CProb + RProb[iR]) );*/
     
-    
-    if( RND > (CProb*2+RProb[iR]) ){
+    if( RND > (CSp+CRp) ){
         return 0; /*No connection*/
-    }else if(RND > (CProb+RProb[iR])){
+    }else if(RND > (CSp/2+CRp)){
         return 1;/* one way */
-    }else if (RND > (RProb[iR])){
+    }else if (RND > (CRp)){
         return 2; /* the other way */
     }else {
         return 3;

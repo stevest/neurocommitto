@@ -10,12 +10,13 @@
 
 /*stamatiad.st@gmail.com*/
 
-int decideConnection(double dist, double *CBins, double *CProb, int CNumel, double *RBins, double *RProb, int RNumel);
+int decideConnection(double dist ,double* bias, double *CBins, double *CProb, int CNumel, double *RBins, double *RProb, int RNumel);
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 {
     
     /*Declerations:*/
     double *distMat, *connMat, *connBins, *connProb, *recipBins,  *recipProb;
+    double *distBias;
     int numel , start, IR;
     int i,j,k, connType, connNumel, recipNumel;
     int incomming, outgoing;
@@ -23,13 +24,14 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     distMat = mxGetPr(prhs[0]);
     numel = (int)mxGetN(prhs[0]);
 	/*Connection probabilities*/
-	connBins = mxGetPr(prhs[1]);
-	connProb = mxGetPr(prhs[2]);
-    connNumel = (int)mxGetN(prhs[2]);
+    distBias = mxGetPr(prhs[1]);
+    connBins = mxGetPr(prhs[2]);
+	connProb = mxGetPr(prhs[3]);
+    connNumel = (int)mxGetN(prhs[3]);
 	/*reciprocal probabilities*/
-	recipBins = mxGetPr(prhs[3]);
-	recipProb = mxGetPr(prhs[4]);
-    recipNumel = (int)mxGetN(prhs[4]);
+	recipBins = mxGetPr(prhs[4]);
+	recipProb = mxGetPr(prhs[5]);
+    recipNumel = (int)mxGetN(prhs[5]);
 	
 	plhs[0] = mxCreateDoubleMatrix(numel,numel,mxREAL);
     connMat = mxGetPr(plhs[0]);
@@ -40,7 +42,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 	for(i=0;i<numel;i++){
 		for(j=start;j<numel;j++){
             /*Decide connection type (no, single, reciprocal) based on distance and imported probabilities */
-                connType = decideConnection(distMat[i*numel+j],connBins,connProb,connNumel,recipBins,recipProb,recipNumel);
+                connType = decideConnection(distMat[i*numel+j],distBias,connBins,connProb,connNumel,recipBins,recipProb,recipNumel);
             /* connection types: 0=No connection, 1,2=Single (side determined as in Perin et al. 2013), 3=Reciprocal */
 			if(connType == 0){
 				connMat[i*numel+j] = 0;
@@ -64,24 +66,25 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     return;
 }
 
-int decideConnection(double dist, double *CBins, double *CProb, int CNumel, double *RBins, double *RProb, int RNumel){
+int decideConnection(double dist,double* bias, double *CBins, double *CProb, int CNumel, double *RBins, double *RProb, int RNumel){
 	int iC, iR;
-    double RND;
+    double RND, CSp, CRp;
     RND = (double)rand()/RAND_MAX;
-      
-
+    
 	iC=0;
 	while((dist>CBins[iC]) && (iC<CNumel)){iC++;}
     
     iR=0;
 	while((dist>RBins[iR]) && (iR<RNumel)){iR++;}
     
-    
-	if( RND > (CProb[iC]*2+RProb[iR]) ){
+    CSp = CProb[iC] / bias[iC];
+    CRp = RProb[iR] / bias[iR];
+
+	if( RND > (CSp+CRp) ){
         return 0; /*No connection*/
-    }else if(RND > (CProb[iC]+RProb[iR])){
+    }else if(RND > ((CSp/2)+CRp)){
          return 1;/* one way */
-    }else if (RND > (RProb[iR])){
+    }else if (RND > (CRp)){
         return 2; /* the other way */
     }else {
         return 3;
