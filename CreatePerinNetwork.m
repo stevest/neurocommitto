@@ -1,11 +1,11 @@
-function Points = CreatePerinNetwork(step, jitter)
+function Points = CreatePerinNetwork(step, jitter, height)
 % Initializes neuronal somata as in example in Perin et al.
 % First create a lattice of 12x12x13 with distances 'step' and afterwards
 % add random special jitter with maximum value 'jitter'
 
 
 ctr = 1;
-for z=0:step:step*12
+for z=0:step:step*height
     for x=0:step:step*11
         for y=0:step:step*11
             Points(ctr,1:3) = ...

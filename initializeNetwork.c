@@ -72,10 +72,10 @@ int decideConnection(double dist,double* bias, double *CBins, double *CProb, int
     RND = (double)rand()/RAND_MAX;
     
 	iC=0;
-	while((dist>CBins[iC]) && (iC<CNumel)){iC++;}
+	while((dist>CBins[iC]) && (iC<CNumel-1)){iC++;}
     
     iR=0;
-	while((dist>RBins[iR]) && (iR<RNumel)){iR++;}
+	while((dist>RBins[iR]) && (iR<RNumel-1)){iR++;}
     
     CSp = CProb[iC] / bias[iC];
     CRp = RProb[iR] / bias[iR];

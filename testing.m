@@ -1,32 +1,18 @@
 close all;clear all;
 cd('C:\Users\steve\Documents\GitHub\neurocommitto');
 
-mex generateDistanceMat.c
-mex initializeNetwork.c
-mex reshapeNetwork.c
-mex generateHisto.c
+% mex generateDistanceMat.c
+% mex initializeNetwork.c
+% mex  reshapeNetwork.c
+% mex generateHisto.c
 % mex -g convergeConnectivity.c
 
 % Initialize somata positions as in Perin et al.
-Points = CreatePerinNetwork(28,15);
-Layers = 1:144:length(Points);
-layerLen = 143;
-
+Points = CreatePerinNetwork(28,15, 2);
+scatter3(Points(1:144,1),Points(1:144,2), Points(1:144,3));
+axis equal;
 % Generate distance matrix:
-% is distmat in the correct transposition?
-DistMat = generateDistanceMat(Points(Layers(1):Layers(1)+layerLen,:)', 0, 28*12);
-% % Convert to distance vector for sorting:
-% start=2;
-% cntr=1;
-% for i=1:length(Points)
-%     for j=start:length(Points)
-%         DistVect(cntr) = DistMat(i,j);
-%         cntr = cntr+1;
-%     end
-%     start=start+1;
-% end
-
-% Main
+DistMat = generateDistanceMat(Points', 0, 28*12);
 
 % Import initial connectivity probabilities from Perin et al. (figure 1)
 connBins = [20,50,90,125,160,190,225,260,295,340];
@@ -45,14 +31,123 @@ NoutgoingProbs = [0, 0.33, 0.66, 0.99] ;
 [a,b] = hist(DistMat(:), connBins);
 a=a/max(a);
 ConnMat = initializeNetwork(DistMat',a,connBins,connProbs,recipBins,recipProbs);
-% ConnMat = ones(size(DistMat));
-% pntsPerTime = 10;
+totalInput = 10;
 
-% [ConnMat] = convergeConnectivity(ConnMat.*DistMat, pntsPerTime, connBins, connProbs, recipProbs, 500);
+tic;
+[ConnMat, probsMat] = reshapeNetwork(DistMat',ConnMat',a,NconnBins,NincomingProbs, NoutgoingProbs,recipBins,recipProbs, totalInput); % Probabilities map(probsMat) is optional
+toc
+imagesc(ConnMat)
+
+Layers = 1:144:length(Points);
+layerLen = 143;
+
+% for only 12 cells of given layer:
+dozen = floor((rand(144,1) * 143)+Layers(ceil(rand(1)*length(Layers)))) ;
+
+% Use custom combinations function for effficiency:
+allCombs3 = combntns(1:12,3);
+allCombs4 = combntns(1:12,4);
+allCombs5 = combntns(1:12,5);
+allCombs6 = combntns(1:12,6);
+allCombs7 = combntns(1:12,7);
+allCombs8 = combntns(1:12,8);
+idxCombs3 = [combntns(1:3,2); combntns(3:-1:1,2)];
+idxCombs4 = [combntns(1:4,2); combntns(4:-1:1,2)];
+idxCombs5 = [combntns(1:5,2); combntns(5:-1:1,2)];
+idxCombs6 = [combntns(1:6,2); combntns(6:-1:1,2)];
+idxCombs7 = [combntns(1:7,2); combntns(7:-1:1,2)];
+idxCombs8 = [combntns(1:8,2); combntns(8:-1:1,2)];
+
+% Code to recreate Fig 5E: (fail)
+%Cluster of 3 pyramidals
+for t = 1:1000
+    dozen = floor((rand(144,1) * 143)+Layers(ceil(rand(1)*length(Layers)))) ;
+    for i=1:length(allCombs3)
+        counter = 0;
+        for j=1:length(idxCombs3)
+            tempIdx = allCombs3(i,idxCombs3(j,:));
+            counter = counter + ConnMat( dozen(tempIdx(1)), dozen(tempIdx(2)) );
+        end
+        cluster3(t,i) = counter;
+    end
+    clusterHist3(t,:) = histc(cluster3(t,:),0:length(idxCombs3)) ;
+    clusterHist3(t,:) = clusterHist3(t,:)/norm(clusterHist3(t,:));
+end
+[aa,b] = hist(DistMat(:), length(idxCombs3)+1);
+aa=aa/max(aa);
+figure;plot(mean(clusterHist3)./aa);figure(gcf);
+
+
+%Cluster of 4 pyramidals
+for t = 1:1000
+    dozen = floor((rand(144,1) * 143)+Layers(ceil(rand(1)*length(Layers)))) ;
+    for i=1:length(allCombs4)
+        counter = 0;
+        for j=1:length(idxCombs4)
+            tempIdx = allCombs4(i,idxCombs4(j,:));
+            counter = counter + ConnMat( dozen(tempIdx(1)), dozen(tempIdx(2)) );
+        end
+        cluster4(t,i) = counter;
+    end
+    clusterHist4(t,:) = histc(cluster4(t,:),0:length(idxCombs4)) ;
+    clusterHist4(t,:) = clusterHist4(t,:)/norm(clusterHist4(t,:));
+end
+[aa,b] = hist(DistMat(:), length(idxCombs4)+1);
+aa=aa/max(aa);
+figure;plot(mean(clusterHist4));figure(gcf);
 
 
 
-% [ConnMat, probsMat] = reshapeNetwork(DistMat',ConnMat',a,NconnBins,NincomingProbs, NoutgoingProbs,recipBins,recipProbs); % Probabilities map(probsMat) is optional
+%Cluster of 6 pyramidals
+for t = 1:1000
+    dozen = floor((rand(144,1) * 143)+Layers(ceil(rand(1)*length(Layers)))) ;
+    for i=1:length(allCombs6)
+        counter = 0;
+        for j=1:length(idxCombs6)
+            tempIdx = allCombs6(i,idxCombs6(j,:));
+            counter = counter + ConnMat( dozen(tempIdx(1)), dozen(tempIdx(2)) );
+        end
+        cluster6(t,i) = counter;
+    end
+    clusterHist6(t,:) = histc(cluster6(t,:),0:length(idxCombs6)) ;
+    clusterHist6(t,:) = clusterHist6(t,:)/norm(clusterHist6(t,:));
+end
+[aa,b] = hist(DistMat(:), length(idxCombs6)+1);
+aa=aa/max(aa);
+figure;plot(mean(clusterHist6)./aa);figure(gcf);
+
+
+%Motifs of 6 pyramidals
+mot6=[];
+motBins = [50, 75, 100, 125, 150, 175, 200, 225];
+for m = 1:length(motBins)
+    motif6 = zeros(1000,length(allCombs6) );
+    for t = 1:100
+        dozen = floor((rand(144,1) * 143)+Layers(ceil(rand(1)*length(Layers)))) ;
+        for i=1:length(allCombs6)
+            avgDist = 0;
+            for j=1:length(idxCombs6)
+                tempIdx = allCombs6(i,idxCombs6(j,:));
+                avgDist = avgDist + DistMat( dozen(tempIdx(1)), dozen(tempIdx(2)) );
+            end
+            avgDist = avgDist / length(idxCombs6);
+            if((avgDist>(motBins(m)-25)) && (avgDist<motBins(m)))
+                counter=0;
+                for j=1:length(idxCombs6)
+                    tempIdx = allCombs6(i,idxCombs6(j,:));
+                    counter = counter + ConnMat( dozen(tempIdx(1)), dozen(tempIdx(2)) );
+                end
+                motif6(t,i) = counter;
+            end
+        end
+    end
+    
+    mot6(m) = mean(motif6(find(motif6>0)));
+end
+
+%%
+
+
 dta = []
 bdta = []
 for i=1:length(DistMat)
@@ -69,16 +164,16 @@ end
 hist( dta(:) , 10 )
 
 % [CS,CR] = generateHisto(ConnMat.*DistMat,connBins)
-% 
+%
 % % CSp = CS/norm(CS);
 % CSp = CS*(1/sum(CS));
 % % CRp = CR/norm(CR);
 % CRp = CRp*(1/sum(CRp));
-% 
+%
 % CS = CSp./CS;
 % CR = CRp./CR;
-% 
-% 
+%
+%
 % bar(CR);
 % bar(CS);
 
@@ -137,7 +232,7 @@ end
 % n = 20;
 % k = 8;
 % d = n-k;
-% 
+%
 % Stirling = ceil(((n^n)*exp(-n)*sqrt(2*pi*n)) / (((k^k)*exp(-k)*sqrt(2*pi*k)) * ((d^d)*exp(-d)*sqrt(2*pi*d))));
 % CBN = cc_combntns(Stirling+100);
 
