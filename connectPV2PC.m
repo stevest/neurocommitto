@@ -1,5 +1,5 @@
 function ConnMatPV2PC = connectPV2PC(dist,connBins,connProbs)
-rng('shuffle');
+% rng('shuffle');
 
 ConnMatPV2PC = zeros(size(dist));
 for i=1:size(dist,1)

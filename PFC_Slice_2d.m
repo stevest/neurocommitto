@@ -1,14 +1,14 @@
 % Initialize somata positions 
 % PCsomata = CreateSliceNetwork([4,4,4], 100, 30);
-PCsomata = CreateRandomNetwork(40, 100, 3)
-scatter3(PCsomata(:,1),PCsomata(:,2), PCsomata(:,3), 5, [0,0,1], 'fill', 'o');
-axis equal; hold on;
-PVsomata = CreateCubeNetworkPV(60, 7); % 226.6 per mm squared (?!?) paper?
-scatter3(PVsomata(:,1),PVsomata(:,2), PVsomata(:,3), 30, [0.5,0.5,0.5], 'fill', 'o');
-axis equal;
+PCsomata = CreateRandomNetwork(65, 100, 3);
+% scatter3(PCsomata(:,1),PCsomata(:,2), PCsomata(:,3), 5, [0,0,1], 'fill', 'o');
+% axis equal; hold on;
+PVsomata = CreateCubeNetworkPV(60, 17); % 226.6 per mm squared (?!?) paper?
+% scatter3(PVsomata(:,1),PVsomata(:,2), PVsomata(:,3), 30, [0.5,0.5,0.5], 'fill', 'o');
+% axis equal;
 
-CBsomata = CreateCubeNetworkPV(200, 3);
-CRsomata = CreateCubeNetworkPV(200, 3);
+CBsomata = CreateCubeNetworkPV(200, 9);
+CRsomata = CreateCubeNetworkPV(200, 9);
 
 nPC = length(PCsomata);
 nPV = length(PVsomata);
@@ -24,18 +24,21 @@ connBinsPV2PC = 0:20:500;
 connProbsPV2PC = linspace(1,0,length(connBinsPV2PC));
 ConnMatPV2PC = connectPV2PC(distPV2PC,connBinsPV2PC,connProbsPV2PC);
 
+distPC2PC = generateDistanceMat(PCsomata', 0);
 % % Yuste Fig4D:
 % bar(histc(reshape(ConnMatPV2PC.*distPV2PC,1,[]),1:20:600));
 
 % Populate the final all-to-all connectivity matrix:
-AllConnMat = zeros(sum([length(PCsomata),length(PVsomata),length(CBsomata),length(CRsomata)]));
+AllConnMat = zeros(nAllCells);
 % Set indies for ease of mind:
 pc = length(PCsomata);
 pv = length(PCsomata) + length(PVsomata);
 cb = length(PCsomata) + length(PVsomata) + length(CBsomata);
 cr = length(PCsomata) + length(PVsomata) + length(CBsomata) + length(CRsomata);
 %Pyramidals connect to all
-AllConnMat(1:pc,:) = 1; % All to all; no clustering
+AllConnMat(1:pc,1:pc) = create_graph(distPC2PC,0.9); % 0=Random graph, 4=Watts-Strogatz graph 
+%Pyramidals to all types of interneurons:
+AllConnMat(1:pc,pc+1:end) = 1; % Connected to all
 % PVs connect to all other PVs + autapses (need to gap junctions?)
 AllConnMat(pc+1:pv,pc+1:pv) = 1; 
 % PVs to PCs based on above connectivity (Yuste 2011):
@@ -80,6 +83,82 @@ for i=1:length(AllConnMat)
     end
 end
 fclose(fid);
+%%
+% affinity propagation similarity measure:
+
+% Find nearest neighbors of Pyramidals only
+NN = nearestNeighbors(AllConnMat(1:pc,1:pc));
+onlyNN = NN.*AllConnMat(1:pc,1:pc);
+% NN(find(NN.*AllConnMat(1:pc,1:pc)));
+
+%perform affinity propagation algorithm:
+
+% Affinity Propagation clusteirng (see Frey & Dueck, Science, Feb. 2007)
+% Note: Statistics Toolbox of Matlab needs to be installed
+
+algorithm = 1;  % 1 --- adaptive AP, 0 --- original AP
+nrun = 50000;   % max iteration times, default 50000
+% nrun2 = 2000;   % max iteration times for original AP
+nconv = 50;     % convergence condition, default 50
+pstep = 0.01;   % decreasing step of preferences: pstep*pmedian, default 0.01
+lam = 0.5;      % damping factor, default 0.5
+cut = 3;        % after clustering, drop an cluster with number of samples < cut
+%splot = 'plot'; % observing a clustering process when it is on
+splot = 'noplot';
+
+% initialization
+type = 1;       % 1: Euclidean distances
+simatrix = 1;   % 0: data as input; 1: similarity matrix as input
+p = [];
+Ms = [];
+% derive similarity matrix
+[rows,cols]=find(onlyNN);
+for i=1:length(rows)
+    M(i,1) = rows(i);
+    M(i,2) = cols(i);
+    M(i,3) = onlyNN(rows(i),cols(i));
+end
+data = [];
+truelabels = ones(pc,1);
+
+
+disp(' '); disp(['==> Clustering is running, please wait ...']);
+tic;
+[labels,NCs,labelid,iend,Sp,Slam,NCfixs] = adapt_apcluster(M,type,...
+p,pstep,simatrix,'convits',nconv,'maxits',nrun,'dampfact',lam,splot);
+
+[NC,Sil,Silmin] = solution_evaluation(data,M,labels,NCs,...
+NCfixs,simatrix,pc,type,cut);
+trun = toc;
+
+fprintf('\n## Running time = %g seconds \n', trun);
+fprintf('## Running iterations = %g \n', iend);
+
+% finding an optimal clustering solution
+solution_findK
+
+truek = unique(truelabels);
+truek = length(truek);
+if truek > 1
+    C = valid_external(labels(:,Sid), truelabels);
+    fprintf('Fowlkes-Mallows validity index: %f\n', C(4));
+end
+if NCopt == truek
+   fprintf('\n## Error rate of clustering solution might be inaccurate if large');
+   fprintf('\n     (then use FM index instead) and it is for reference only:');
+   valid_errorate(labels(:,Sid), truelabels);
+end
+
+for i=1:NC(Sid)
+    tempIdx = find(labels(:,Sid) == i);
+    tempMat = AllConnMat(tempIdx,1:pc);
+    tempMat = tempMat(:,tempIdx);
+    clust_coeff(tempMat)
+    scatter3(PCsomata(tempIdx,1),PCsomata(tempIdx,2), PCsomata(tempIdx,3), 45, rand(1,3), 'fill', 'o');hold on;
+end
+axis equal; hold on;
+
+clust_coeff(AllConnMat(1:pc,1:pc))
 %%
 DistMat = generateDistanceMat(PCsomata', 0);
 
