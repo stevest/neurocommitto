@@ -159,6 +159,25 @@ end
 axis equal; hold on;
 
 clust_coeff(AllConnMat(1:pc,1:pc))
+%% Export stimulation parameters in .hoc file:
+
+% Write clustering results to a .hoc file:
+fid = fopen('../importStimulationParameters.hoc','w');
+fprintf(fid,'// This HOC file was generated with MATLAB\n\n');
+fprintf(fid,'// Override variables\n');
+
+fprintf(fid,'// Object decleration:\n');
+fprintf(fid,'objref PcellStimList\n');
+fprintf(fid,'PcellStimList = new Vector(nPCcells)\n');
+
+fprintf(fid,'\n\n// Import parameters: (long-long text following!)\n\n');
+% network stimulation:
+for i=1:nPC
+    for j=1:nPC
+        fprintf(fid,'PcellStimList.x[%d] = %d\n',i-1,j-1, AllConnMat(i,j));
+    end
+end
+fclose(fid);
 %%
 DistMat = generateDistanceMat(PCsomata', 0);
 
