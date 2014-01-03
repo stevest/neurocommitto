@@ -1,21 +1,97 @@
-% Initialize somata positions 
+%%  ---- Initialize Pyramidal cells ---- 
+nPC = 65;%216;
+
+% Initialize somata positions
 % PCsomata = CreateSliceNetwork([4,4,4], 100, 30);
-PCsomata = CreateRandomNetwork(65, 100, 3);
-% scatter3(PCsomata(:,1),PCsomata(:,2), PCsomata(:,3), 5, [0,0,1], 'fill', 'o');
+PCsomata = CreateRandomNetwork(nPC, 200, 3);
+% scatter3(PCsomata(:,1),PCsomata(:,2), PCsomata(:,3), 20, [0,0,1], 'fill', 'o');
 % axis equal; hold on;
-PVsomata = CreateCubeNetworkPV(60, 17); % 226.6 per mm squared (?!?) paper?
+
+distPC2PC = generateDistanceMat(PCsomata', 0);
+connBinsPC2PC = 20:30:500;
+connProbsPC2PC = 0.25 .* exp(-0.006 * connBinsPC2PC);
+
+recipBinsPC2PC = 20:30:500;
+recipProbsPC2PC = 0.12 .* exp(-0.006 * recipBinsPC2PC);
+% Update probabilities from Perin et al. (Figure S4)
+NconnBins = [0,1,2,3];
+NincomingProbs = [0.1, 0.2, 0.25, 0.4] ;
+NoutgoingProbs = [0.12, 0.25, 0.24, 0.2] ;
+
+% % Yuste Fig4D:
+% bar(histc(reshape(ConnMatPV2PC.*distPV2PC,1,[]),1:20:600));
+
+% Pyramidals connect to all
+glProbConn = 0.7;
+PC2PC = zeros(nPC,nPC,4);
+PC2PC(:,:,5) = create_graph_WS(distPC2PC,glProbConn,0.99); % 1.0=Random graph, 0.0=Watts-Strogatz graph
+PC2PC(:,:,4) = create_graph_WS(distPC2PC,glProbConn,0.5); % 1.0=Random graph, 0.0=Watts-Strogatz graph
+PC2PC(:,:,3) = create_graph_WS(distPC2PC,glProbConn,0.01); % 1.0=Random graph, 0.0=Watts-Strogatz graph
+PC2PC(:,:,2) = create_graph_DD(distPC2PC,glProbConn,connBinsPC2PC, connProbsPC2PC);
+PC2PC(:,:,1) = create_graph_CN(distPC2PC,glProbConn, connBinsPC2PC, connProbsPC2PC, ...
+    recipBinsPC2PC, recipProbsPC2PC,NconnBins,NincomingProbs,NoutgoingProbs);
+
+% clustering = 3;
+for i=1:size(PC2PC,3)
+    tempPC2PC(:,:,i) = PC2PC(:,:,i);
+end
+
+%% ---- affinity propagation similarity measure: ---- 
+for d=1:size(tempPC2PC,3)
+    % Find nearest neighbors of Pyramidals only
+    [CNi,CNo] = commonNeighbors(tempPC2PC(:,:,d));
+    onlyCN{d} = [CNi + CNo] .* tempPC2PC(:,:,d);
+    
+    %perform affinity propagation algorithm:
+    [NC{d},labels{d},Sid{d}] = runAffinityPropagation(onlyCN{d});
+    
+    %how many cells in each cluster?
+    cellsPerCluster(d) = {histc(labels{d}(:,Sid{d}),1:NC{d}(Sid{d}))'};
+%     bar(cellsPerCluster{d})
+
+    
+    Deg{d} = [];
+    for i=1:NC{d}(Sid{d})
+        tempIdx = find(labels{d}(:,Sid{d}) == i);
+        tempMat = tempPC2PC(tempIdx,tempIdx);
+%         CC(i) = clust_coeff(tempMat);
+        Deg{i,d} = [Deg{d},degrees(tempMat)];
+    end
+    [~,IDX(d)]=max(cellfun(@mean,Deg(:,d)));
+    % [~,IDX]=max(CC);
+    
+    % Get cluster with greater degree:
+    [r,~,~] = find(labels{d}(:,Sid{d}) == IDX(d));
+    StimVect(d) = {zeros(nPC,1)};
+    StimVect{d}(r) = 1;
+end
+%%  ---- Isolate Cluster ---- 
+equalizeClusters(cellsPerCluster,thrshld)
+
+for d=1:size(tempPC2PC,3)
+    exportPC2PC(d) = {tempPC2PC(find(StimVect{d}),find(StimVect{d}),d)};
+    exportPCsomata(d) = {PCsomata(find(StimVect{d}),:)};
+    exportStimVect(d) = {ones(size(r,1),1)};
+    nPC = length(PCsomata);
+end
+%%  ---- Rest of the cells ---- 
+% tempPC2PC = PC2PC(:,:,4); % replace connectivity to your liking
+% tempPC2PC(r,r) = PC2PC(r,r,1);
+clstr = 1;
+% Rest of the cells!
+nPV = round(nPC*17/65);
+nCB = round(nPC*9/65);
+nCR = round(nPC*9/65);
+nAllCells = sum([nPC,nPV,nCB,nCR]);
+AllCells = [nPC , nPV , nCB , nCR, nAllCells];
+
+
+PVsomata = CreateCubeNetworkPV(250, nPV); % 226.6 per mm squared (?!?) paper?
 % scatter3(PVsomata(:,1),PVsomata(:,2), PVsomata(:,3), 30, [0.5,0.5,0.5], 'fill', 'o');
 % axis equal;
 
-CBsomata = CreateCubeNetworkPV(200, 9);
-CRsomata = CreateCubeNetworkPV(200, 9);
-
-nPC = length(PCsomata);
-nPV = length(PVsomata);
-nCB = length(CBsomata);
-nCR = length(CRsomata);
-AllCells = [nPC , nPV , nCB , nCR];
-nAllCells = sum(AllCells);
+CBsomata = CreateCubeNetworkPV(200, nCB);
+CRsomata = CreateCubeNetworkPV(200, nCR);
 
 % Distance of each interneuron from Pyramidal and connect based on
 % probability from Yuste 2011:
@@ -24,160 +100,168 @@ connBinsPV2PC = 0:20:500;
 connProbsPV2PC = linspace(1,0,length(connBinsPV2PC));
 ConnMatPV2PC = connectPV2PC(distPV2PC,connBinsPV2PC,connProbsPV2PC);
 
-distPC2PC = generateDistanceMat(PCsomata', 0);
-% % Yuste Fig4D:
-% bar(histc(reshape(ConnMatPV2PC.*distPV2PC,1,[]),1:20:600));
-
 % Populate the final all-to-all connectivity matrix:
 AllConnMat = zeros(nAllCells);
 % Set indies for ease of mind:
-pc = length(PCsomata);
-pv = length(PCsomata) + length(PVsomata);
-cb = length(PCsomata) + length(PVsomata) + length(CBsomata);
-cr = length(PCsomata) + length(PVsomata) + length(CBsomata) + length(CRsomata);
-%Pyramidals connect to all
-AllConnMat(1:pc,1:pc) = create_graph(distPC2PC,0.9); % 0=Random graph, 4=Watts-Strogatz graph 
-%Pyramidals to all types of interneurons:
+pc = size(PCsomata,1);
+pv = size(PCsomata,1) + size(PVsomata,1);
+cb = size(PCsomata,1) + size(PVsomata,1) + size(CBsomata,1);
+cr = size(PCsomata,1) + size(PVsomata,1) + size(CBsomata,1) + size(CRsomata,1);
+
+% tempPC2PC(sub2ind([nPC,nPC],[1:pc],[1:pc])) = 1; % autapses in Pyramidals
+tmptmp = tempPC2PC(:,:,clstr);
+tmptmp(sub2ind([nPC,nPC],[1:pc],[1:pc])) = 1;
+AllConnMat(1:pc,1:pc) = tmptmp;
+
+
+% Pyramidals to all types of interneurons:
 AllConnMat(1:pc,pc+1:end) = 1; % Connected to all
 % PVs connect to all other PVs + autapses (need to gap junctions?)
-AllConnMat(pc+1:pv,pc+1:pv) = 1; 
+AllConnMat(pc+1:pv,pc+1:pv) = 1;
 % PVs to PCs based on above connectivity (Yuste 2011):
-AllConnMat(pc+1:pv,1:pc) = ConnMatPV2PC; 
+AllConnMat(pc+1:pv,1:pc) = ConnMatPV2PC;
 % CB only connect to PC (Xenia) na to psa3w...
-AllConnMat(pv+1:cb,1:pc) = 1; 
+AllConnMat(pv+1:cb,1:pc) = 1;
 % CR only connect to PC and CB (Xenia) na to psa3w...
-AllConnMat(cb+1:cr,1:pc) = 1; 
-AllConnMat(cb+1:cr,pv+1:cb) = 1; 
+AllConnMat(cb+1:cr,1:pc) = 1;
+AllConnMat(cb+1:cr,pv+1:cb) = 1;
 
-sc(AllConnMat)
+figure();
+imagesc(AllConnMat)
+% clust_coeff(PC2PC(:,:,4))
 
-%% Export parameter matrices in .hoc file:
+save('../CRUN.mat');
 
-% Write NMDA results to a .hoc file:
-fid = fopen('../importNetworkParameters.hoc','w');
-fprintf(fid,'// This HOC file was generated with MATLAB\n\n');
-fprintf(fid,'// Override variables\n');
-
-fprintf(fid,sprintf('nPCcells=%d\n',nPC));
-fprintf(fid,sprintf('nPVcells=%d\n',nPV));
-fprintf(fid,sprintf('nCBcells=%d\n',nCB));
-fprintf(fid,sprintf('nCRcells=%d\n',nCR));
-fprintf(fid,sprintf('nAllCells=%d\n\n',nAllCells));
-
-fprintf(fid,'// Object decleration:\n');
-fprintf(fid,'objref connMatrix, weightsMatrix\n');
-fprintf(fid,'connMatrix = new Matrix(nAllCells, nAllCells)\n');
-fprintf(fid,'weightsMatrix = new Matrix(nAllCells, nAllCells)\n');
-
-fprintf(fid,'\n\n// Import parameters: (long-long text following!)\n\n');
-% network connectivity:
-for i=1:length(AllConnMat)
-    for j=1:length(AllConnMat)
-        fprintf(fid,'connMatrix.x[%d][%d] = %d\n',i-1,j-1, AllConnMat(i,j));
+%%  ---- Export parameters to NEURON ---- 
+mypath = '/srv/userdata/HOMES/stefanos/Documents/GitHub/prefrontal-micro/experiment/network/';
+exportNetworkParameters(AllCells,AllConnMat,mypath);
+exportStimulationParameters(AllCells,StimVect{clstr},mypath);
+%%  ---- Plot clustering ---- 
+figure('renderer','opengl');hold on;
+for i=1:NC{clstr}(Sid{clstr})
+    clustCol = rand(1,3);
+    tempIdx = find(labels{clstr}(:,Sid{clstr}) == i);
+    for c1 = 1:length(tempIdx)
+        for c2 = 1:length(tempIdx)
+            if AllConnMat(tempIdx(c1),tempIdx(c2)) && (i == IDX(clstr))
+                plot3( PCsomata([tempIdx(c1),tempIdx(c2)],1),...
+                    PCsomata([tempIdx(c1),tempIdx(c2)],2),...
+                    PCsomata([tempIdx(c1),tempIdx(c2)],3), 'color', clustCol );
+            end
+        end
     end
-end
-% Network synaptic weights
-for i=1:length(AllConnMat)
-    for j=1:length(AllConnMat)
-        fprintf(fid,'weightsMatrix.x[%d][%d] = %f\n',i-1,j-1, AllConnMat(i,j));
-    end
-end
-fclose(fid);
-%%
-% affinity propagation similarity measure:
-
-% Find nearest neighbors of Pyramidals only
-NN = nearestNeighbors(AllConnMat(1:pc,1:pc));
-onlyNN = NN.*AllConnMat(1:pc,1:pc);
-% NN(find(NN.*AllConnMat(1:pc,1:pc)));
-
-%perform affinity propagation algorithm:
-
-% Affinity Propagation clusteirng (see Frey & Dueck, Science, Feb. 2007)
-% Note: Statistics Toolbox of Matlab needs to be installed
-
-algorithm = 1;  % 1 --- adaptive AP, 0 --- original AP
-nrun = 50000;   % max iteration times, default 50000
-% nrun2 = 2000;   % max iteration times for original AP
-nconv = 50;     % convergence condition, default 50
-pstep = 0.01;   % decreasing step of preferences: pstep*pmedian, default 0.01
-lam = 0.5;      % damping factor, default 0.5
-cut = 3;        % after clustering, drop an cluster with number of samples < cut
-%splot = 'plot'; % observing a clustering process when it is on
-splot = 'noplot';
-
-% initialization
-type = 1;       % 1: Euclidean distances
-simatrix = 1;   % 0: data as input; 1: similarity matrix as input
-p = [];
-Ms = [];
-% derive similarity matrix
-[rows,cols]=find(onlyNN);
-for i=1:length(rows)
-    M(i,1) = rows(i);
-    M(i,2) = cols(i);
-    M(i,3) = onlyNN(rows(i),cols(i));
-end
-data = [];
-truelabels = ones(pc,1);
-
-
-disp(' '); disp(['==> Clustering is running, please wait ...']);
-tic;
-[labels,NCs,labelid,iend,Sp,Slam,NCfixs] = adapt_apcluster(M,type,...
-p,pstep,simatrix,'convits',nconv,'maxits',nrun,'dampfact',lam,splot);
-
-[NC,Sil,Silmin] = solution_evaluation(data,M,labels,NCs,...
-NCfixs,simatrix,pc,type,cut);
-trun = toc;
-
-fprintf('\n## Running time = %g seconds \n', trun);
-fprintf('## Running iterations = %g \n', iend);
-
-% finding an optimal clustering solution
-solution_findK
-
-truek = unique(truelabels);
-truek = length(truek);
-if truek > 1
-    C = valid_external(labels(:,Sid), truelabels);
-    fprintf('Fowlkes-Mallows validity index: %f\n', C(4));
-end
-if NCopt == truek
-   fprintf('\n## Error rate of clustering solution might be inaccurate if large');
-   fprintf('\n     (then use FM index instead) and it is for reference only:');
-   valid_errorate(labels(:,Sid), truelabels);
-end
-
-for i=1:NC(Sid)
-    tempIdx = find(labels(:,Sid) == i);
-    tempMat = AllConnMat(tempIdx,1:pc);
-    tempMat = tempMat(:,tempIdx);
-    clust_coeff(tempMat)
-    scatter3(PCsomata(tempIdx,1),PCsomata(tempIdx,2), PCsomata(tempIdx,3), 45, rand(1,3), 'fill', 'o');hold on;
+    scatter3(PCsomata(tempIdx,1),PCsomata(tempIdx,2), PCsomata(tempIdx,3),...
+        45, clustCol, 'fill', 'o');hold on;
 end
 axis equal; hold on;
+%%  ---- Perin's statistics ---- 
+% Use custom combinations function for effficiency:
+% idxCombs3 = [combntns(1:3,2); combntns(3:-1:1,2)];
+% cluster3= [];
+% dist3 = [];
+idxCombs6 = [combntns(1:6,2); combntns(6:-1:1,2)];
+cluster6= [];
+dist6 = [];
 
-clust_coeff(AllConnMat(1:pc,1:pc))
-%% Export stimulation parameters in .hoc file:
+%Cluster of 6 pyramidals
+ctr=1;
+for t = 1:30
+    layerDepth = rand(1) * 250;
+    dozen = find((PCsomata(:,3)>(layerDepth-1)) & (PCsomata(:,3)<(layerDepth+1)));
+    
+    if(length(dozen) >= 6)
+        allCombs6 = combntns(1:length(dozen),6);
+        for i=1:size(allCombs6,1)
+            counter = 0;
+            meanDist = [];
+            for j=1:length(idxCombs6)
+                tempIdx = allCombs6(i,idxCombs6(j,:));
+                
+                if AllConnMat( dozen(tempIdx(1)), dozen(tempIdx(2)) )
+                    counter = counter + 1;
+                    meanDist = [meanDist,distPC2PC( dozen(tempIdx(1)), dozen(tempIdx(2)) )] ;
+                end
+            end
+            cluster6(ctr) = counter;
+            dist6(ctr) = mean(meanDist);
+            ctr = ctr+1;
+        end
+    end
+    
+%     if(length(dozen) >= 3)
+%         allCombs3 = combntns(1:length(dozen),3);
+%         for i=1:size(allCombs3,1)
+%             counter = 0;
+%             meanDist = [];
+%             for j=1:length(idxCombs3)
+%                 tempIdx = allCombs3(i,idxCombs3(j,:));
+%                 
+%                 if AllConnMat( dozen(tempIdx(1)), dozen(tempIdx(2)) )
+%                     counter = counter + 1;
+% %                     meanDist = [meanDist,distPC2PC( dozen(tempIdx(1)), dozen(tempIdx(2)) )] ;
+%                 end
+%             end
+%             cluster3(ctr) = counter;
+% %             dist3(ctr) = mean(meanDist);
+%             ctr = ctr+1;
+%         end
+%     end
+end
 
-% Write clustering results to a .hoc file:
-fid = fopen('../importStimulationParameters.hoc','w');
-fprintf(fid,'// This HOC file was generated with MATLAB\n\n');
-fprintf(fid,'// Override variables\n');
+% Initialize plot:
+PerinPlot={};
+PerinPlot(1,1:length(50:25:250))={[]};
 
-fprintf(fid,'// Object decleration:\n');
-fprintf(fid,'objref PcellStimList\n');
-fprintf(fid,'PcellStimList = new Vector(nPCcells)\n');
 
-fprintf(fid,'\n\n// Import parameters: (long-long text following!)\n\n');
-% network stimulation:
-for i=1:nPC
-    for j=1:nPC
-        fprintf(fid,'PcellStimList.x[%d] = %d\n',i-1,j-1, AllConnMat(i,j));
+for i=1:ctr-1
+    b = find( histc(dist6(i), 50:25:250) );
+    if ~isempty(b)
+    PerinPlot{1,b} = [PerinPlot{1,b}, cluster6(i)] ;
     end
 end
-fclose(fid);
+
+bar(cellfun(@nanmean,PerinPlot));
+
+
+% [aa,b] = hist(distPC2PC(:), length(idxCombs6)+1);
+% aa=aa/max(aa);
+% figure;plot(mean(clusterHist6)./aa);figure(gcf);
+%% Temp tests
+clear DEG_R DEG_C CC_R CC_C CC_D DEG_D CC_CN DEG_CN
+tempConnMat = [];
+for i=1:100
+    i
+    %     Watts & Strogazt random
+    tempConnMat = create_graph_WS(distPC2PC,0.99); % 1.0=Random graph, 0.0=Watts-Strogatz graph
+    CC_R(i,:) = clust_coeff(tempConnMat);
+    DEG_R(i,:) = sort(degrees(tempConnMat),'descend');
+    %     Watts & Strogazt clustered
+    tempConnMat = create_graph_WS(distPC2PC,0.01); % 1.0=Random graph, 0.0=Watts-Strogatz graph
+    CC_C(i,:) = clust_coeff(tempConnMat);
+    DEG_C(i,:) = sort(degrees(tempConnMat),'descend');
+    %     Distance dependent:
+    tempConnMat = create_graph_DD(distPC2PC, connBinsPC2PC, connProbsPC2PC);
+    CC_D(i,:) = clust_coeff(tempConnMat);
+    DEG_D(i,:) = sort(degrees(tempConnMat),'descend');
+    %     Common neighbour dependent (Perin et al)
+    tempConnMat = create_graph_CN(distPC2PC, connBinsPC2PC, connProbsPC2PC, ...
+        recipBinsPC2PC, recipProbsPC2PC,NconnBins,NincomingProbs,NoutgoingProbs);
+    CC_CN(i,:) = clust_coeff(tempConnMat);
+    DEG_CN(i,:) = sort(degrees(tempConnMat),'descend');
+end
+
+plot(mean(DEG_R),'g');hold on;
+plot(mean(DEG_C),'r');hold on;
+plot(mean(DEG_D),'m');hold on;
+plot(mean(DEG_CN),'k');hold on;
+
+mean(CC_R)
+mean(CC_C)
+mean(CC_D)
+mean(CC_CN)
+
+
+
 %%
 DistMat = generateDistanceMat(PCsomata', 0);
 
@@ -347,35 +431,35 @@ data = PCsomata;
 truelabels = ones(nrow,1);
 
 
-   tic;
+tic;
 
-      [labels,NCs,labelid,iend,Sp,Slam,NCfixs] = adapt_apcluster(data,type,...
-        p,pstep,simatrix,'convits',nconv,'maxits',nrun,'dampfact',lam,splot);
-    
-  [NC,Sil,Silmin] = solution_evaluation(data,M,labels,NCs,...
-      NCfixs,simatrix,nrow,type,cut);
-  trun = toc;
+[labels,NCs,labelid,iend,Sp,Slam,NCfixs] = adapt_apcluster(data,type,...
+    p,pstep,simatrix,'convits',nconv,'maxits',nrun,'dampfact',lam,splot);
 
-  fprintf('\n## Running time = %g seconds \n', trun);
-  fprintf('## Running iterations = %g \n', iend);
-  
-  % finding an optimal clustering solution
-  [Smax, Sid] = max(Sil);
-  NCopt = NC(Sid);
-  fprintf('\n## Clustering solution by adaptive Affinity Propagation:\n');
-  fprintf('  Optimal number of clusters is %d, Silhouette = %g,\n',NCopt,Smax);
-  if Smax < 0.3
-      R = length(NC);
-      R = ceil(R/2):R;
-      [Tmax, Q] = max(Silmin(R));
-      Sid = R(Q);
-      NCopt2 = NC(Sid);
-      fprintf('  If Silhouette values are small & NCs are large, Optimal NC is %d,\n',NCopt2);
-      fprintf('  where min Silhouette of single cluster is %g.\n',Tmax);
-      fprintf('  The optimal solution (class labels) is in labels(:,Sid)');
-  end
-  fprintf('\n## Silhouette values at different NCs: [NC;Sil;Silmin] \n');
-  disp([NC;Sil;Silmin]);
+[NC,Sil,Silmin] = solution_evaluation(data,M,labels,NCs,...
+    NCfixs,simatrix,nrow,type,cut);
+trun = toc;
+
+fprintf('\n## Running time = %g seconds \n', trun);
+fprintf('## Running iterations = %g \n', iend);
+
+% finding an optimal clustering solution
+[Smax, Sid] = max(Sil);
+NCopt = NC(Sid);
+fprintf('\n## Clustering solution by adaptive Affinity Propagation:\n');
+fprintf('  Optimal number of clusters is %d, Silhouette = %g,\n',NCopt,Smax);
+if Smax < 0.3
+    R = length(NC);
+    R = ceil(R/2):R;
+    [Tmax, Q] = max(Silmin(R));
+    Sid = R(Q);
+    NCopt2 = NC(Sid);
+    fprintf('  If Silhouette values are small & NCs are large, Optimal NC is %d,\n',NCopt2);
+    fprintf('  where min Silhouette of single cluster is %g.\n',Tmax);
+    fprintf('  The optimal solution (class labels) is in labels(:,Sid)');
+end
+fprintf('\n## Silhouette values at different NCs: [NC;Sil;Silmin] \n');
+disp([NC;Sil;Silmin]);
 
 
 
@@ -386,9 +470,9 @@ if truek > 1
     fprintf('Fowlkes-Mallows validity index: %f\n', C(4));
 end
 if NCopt == truek
-   fprintf('\n## Error rate of clustering solution might be inaccurate if large');
-   fprintf('\n     (then use FM index instead) and it is for reference only:');
-   valid_errorate(labels(:,Sid), truelabels);
+    fprintf('\n## Error rate of clustering solution might be inaccurate if large');
+    fprintf('\n     (then use FM index instead) and it is for reference only:');
+    valid_errorate(labels(:,Sid), truelabels);
 end
 %clf; plotdata_bylabels(data,truelabels,2,0,'co');
 %clf; plotdata_bylabels(data,labels(:,M),2,0,'nb');

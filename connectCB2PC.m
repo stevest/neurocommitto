@@ -1,12 +1,12 @@
-function ConnMatPV2PC = connectPV2PC(dist,connBins,connProbs)
+function ConnMatCB2PC = connectCB2PC(dist,connBins,connProbs)
 % rng('shuffle');
 
-ConnMatPV2PC = zeros(size(dist));
+ConnMatCB2PC = zeros(size(dist));
 for i=1:size(dist,1)
     for j=1:size(dist,2)
         [~,bin] = histc(dist(i,j),connBins);
         if(rand(1) <= connProbs(bin))
-           ConnMatPV2PC(i,j) = 1;
+           ConnMatCB2PC(i,j) = 1;
         end
     end
 end
