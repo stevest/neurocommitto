@@ -25,7 +25,7 @@ PC2PC(:,:,2) = create_graph_DD(distPC2PC,0.9,connBinsPC2PC, connProbsPC2PC);
 PC2PC(:,:,1) = create_graph_CN(distPC2PC,0.9, connBinsPC2PC, connProbsPC2PC, ...
 recipBinsPC2PC, recipProbsPC2PC,NconnBins,NincomingProbs,NoutgoingProbs);
 
-
+%%
 strict(:,:,1) =  PC2PC(:,:,1) .*  PC2PC(:,:,1)';
 loose(:,:,1) = PC2PC(:,:,1) |  PC2PC(:,:,1)';
 strict(:,:,2) =  PC2PC(:,:,2) .*  PC2PC(:,:,2)';
@@ -38,16 +38,23 @@ strict(:,:,5) =  PC2PC(:,:,5) .*  PC2PC(:,:,5)';
 loose(:,:,5) = PC2PC(:,:,5) |  PC2PC(:,:,5)';
 loose = double(loose);
 
-for i=2:5
-    [StrictCliques1(i), blah] = Cliquer.FindAll(strict(:,:,1), i, i, false, 3);
-%     [StrictCliques2(i), blah] = Cliquer.FindAll(strict(:,:,2), i, i, false, 3);
-%     [StrictCliques3(i), blah] = Cliquer.FindAll(strict(:,:,3), i, i, false, 3);
-%     [StrictCliques4(i), blah] = Cliquer.FindAll(strict(:,:,4), i, i, false, 3);
-%     [StrictCliques5(i), blah] = Cliquer.FindAll(strict(:,:,5), i, i, false, 3);
-%     
-%     [LooseCliques1(i), blah] = Cliquer.FindAll(loose(:,:,1), i, i, false, 3);
-%     [LooseCliques2(i), blah] = Cliquer.FindAll(loose(:,:,2), i, i, false, 3);
-%     [LooseCliques3(i), blah] = Cliquer.FindAll(loose(:,:,3), i, i, false, 3);
-%     [LooseCliques4(i), blah] = Cliquer.FindAll(loose(:,:,4), i, i, false, 3);
-%     [LooseCliques5(i), blah] = Cliquer.FindAll(loose(:,:,5), i, i, false, 3);
+%%
+for i=1:12
+    [StrictCliques(1,i), blah] = Cliquer.FindAll(strict(:,:,1), i, i, false, 1000000000);
+    [StrictCliques(2,i), blah] = Cliquer.FindAll(strict(:,:,2), i, i, false, 1000000000);
+    [StrictCliques(3,i), blah] = Cliquer.FindAll(strict(:,:,3), i, i, false, 1000000000);
+    [StrictCliques(4,i), blah] = Cliquer.FindAll(strict(:,:,4), i, i, false, 1000000000);
+    [StrictCliques(5,i), blah] = Cliquer.FindAll(strict(:,:,5), i, i, false, 1000000000);
+    
+    [LooseCliques(1,i), blah] = Cliquer.FindAll(loose(:,:,1), i, i, false, 1000000000);
+    [LooseCliques(2,i), blah] = Cliquer.FindAll(loose(:,:,2), i, i, false, 1000000000);
+    [LooseCliques(3,i), blah] = Cliquer.FindAll(loose(:,:,3), i, i, false, 1000000000);
+    [LooseCliques(4,i), blah] = Cliquer.FindAll(loose(:,:,4), i, i, false, 1000000000);
+    [LooseCliques(5,i), blah] = Cliquer.FindAll(loose(:,:,5), i, i, false, 1000000000);
 end
+
+%% 
+clust_coeff(PC2PC(:,:,1))
+
+plot(sort(degrees(PC2PC(:,:,5)),'descend'));hold on;
+plot(sort(degrees(PC2PC(:,:,1)),'descend'),'r');hold on;

@@ -1,5 +1,13 @@
-# Matlab specific #
-###################
+# Compiled MEX files:
 *.mexw32
 *.mexw64
 *.asv
+
+# Matlab crash log files:
+*.log
+
+# Matlab MAT files: (Hopefully easy to reproduce..):
+*.mat
+
+# Matlab figure files:
+*.fig
