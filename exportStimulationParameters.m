@@ -2,7 +2,7 @@ function exportStimulationParameters(AllCells,StimVect,outPath)
 % Export stimulation parameters in .hoc file:
 
 % Write clustering results to a .hoc file:
-fid = fopen([outPath,'/importStimulationParameters.hoc'],'w');
+fid = fopen([outPath,'importStimulationParameters.hoc'],'w');
 fprintf(fid,'// This HOC file was generated with MATLAB\n\n');
 fprintf(fid,'// Override variables\n');
 

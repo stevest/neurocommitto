@@ -1,7 +1,7 @@
 function distMat = distancePV2PC(PV,PC)
-    distMat = zeros(length(PV),length(PC));
-    for i=1:length(PV)
-       distMat(i,1:length(PC)) = sqrt( sum((PC(:,1:3)-repmat(PV(i,1:3),[length(PC),1])).^2,2) );
+    distMat = zeros(size(PV,1),size(PC,1));
+    for i=1:size(PV,1)
+       distMat(i,1:size(PC,1)) = reshape(sqrt( sum((PC(:,1:3)-repmat(PV(i,1:3),[size(PC,1),1])).^2,2) ),1,[]);
     end
 return;
 end
